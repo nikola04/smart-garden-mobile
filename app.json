@@ -12,7 +12,13 @@
       "tsconfigPaths": true
     },
 
-    "plugins": [],
+    "plugins": [
+        ["react-native-ble-plx", {
+          "isBackgroundEnabled": true,
+          "modes": ["peripheral", "central"],
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to bluetooth devices"
+        }]
+    ],
 
     "orientation": "portrait",
     "icon": "./assets/icon.png",
