@@ -6,8 +6,23 @@ const Stack = createStackNavigator();
 
 export default function StackNavigation() {
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Scan" component={ScanScreen} />
+        <Stack.Navigator screenOptions={{
+            headerStyle: {
+                backgroundColor: '#fff', // Background color of the header
+                height: 100,
+                elevation: 0,
+                shadowOpacity: 0,
+                borderBottomWidth: 0, // No border at the bottom of the header
+            },
+            headerTintColor: '#999', // Color of the back button and title
+            headerTitleStyle: {
+                textTransform: 'uppercase',
+                fontWeight: '500', // Style for the header title text
+                letterSpacing: 1, // Letter spacing for the header title
+                fontSize: 15, // Font size for the header title
+            },
+        }}>
+            <Stack.Screen name="Pairing Devices" component={ScanScreen} />
             <Stack.Screen name="Device" component={DeviceScreen} />
         </Stack.Navigator>
     );
