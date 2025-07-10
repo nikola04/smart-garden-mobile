@@ -59,7 +59,7 @@ export default function ScanScreen() {
                 if(prevDevices.some(dev => dev.id === device.id)) return prevDevices;
                 return ([...prevDevices, { ...device, name: device.name || 'Unnamed Device' }]);
             });
-        }, 3000, () => {
+        }, 5000, () => {
             setState('scanned');
         });
 
@@ -132,6 +132,10 @@ export default function ScanScreen() {
                     </Animated.View>
                 </Pressable>
             </Animated.View>
+            { state === 'scanned' && devices.length === 0 && <View className="gap-2">
+                <Text className="uppercase font-bold text-center text-[13px]">No nearby devices found.</Text>
+                <Text className="text-center">Are you holding button on your device?</Text>
+            </View> }
             <Animated.View style={{ flex: listFlex }}>
                 <FlatList
                     className="flex-grow w-full"
