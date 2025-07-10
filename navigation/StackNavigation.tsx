@@ -1,8 +1,14 @@
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import DeviceScreen from 'app/device/DeviceScreen';
 import ScanScreen from 'app/scan/ScanScreen';
+import { Device } from 'react-native-ble-plx';
 
-const Stack = createStackNavigator();
+export type RootStackParamList = {
+    Pairing: undefined;
+    Device: Device;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 export default function StackNavigation() {
     return (
@@ -22,8 +28,10 @@ export default function StackNavigation() {
                 fontSize: 15, // Font size for the header title
             },
         }}>
-            <Stack.Screen name="Pairing Devices" component={ScanScreen} />
+            <Stack.Screen name="Pairing" component={ScanScreen} />
             <Stack.Screen name="Device" component={DeviceScreen} />
         </Stack.Navigator>
     );
 }
+
+export type NavigationProp = StackNavigationProp<RootStackParamList, 'Pairing'>;

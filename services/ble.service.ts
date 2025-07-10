@@ -1,5 +1,5 @@
-import { PermissionsAndroid, Platform } from "react-native";
-import { BleManager } from "react-native-ble-plx";
+import { Alert, PermissionsAndroid, Platform } from "react-native";
+import { BleError, BleManager } from "react-native-ble-plx";
 
 export interface IStrippedDevice {
     id: string;
@@ -54,30 +54,46 @@ export class BLEService {
         return false;
     };
 
-    public async startScan(callback: (device: IStrippedDevice) => void, timeout: number = 3000, onStop?: () => void) {
+    public async isBluetoothEnabled(): Promise<boolean> {
+        if (this.isMock) return true;
+        if (!this.manager) {
+            console.error('BLE Manager is not initialized');
+            return false;
+        }
+        const state = await this.manager.state();
+        return state === 'PoweredOn';
+    }
+
+    public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: IStrippedDevice | null) => void, onStop?: () => void) {
         if (this.isMock) {
-            setTimeout(() => {
-                callback({ id: 'mock-1', name: 'Mock Sensor A', isConnectable: true });
-            }, 500);
-            setTimeout(() => {
-                callback({ id: 'mock-2', name: 'Mock Sensor B', isConnectable: true });
-            }, 1000);
+            setTimeout(() => callback(null, { id: 'mock-1', name: 'Mock Sensor A', isConnectable: true }), 500);
+            setTimeout(() => callback(null, { id: 'mock-2', name: 'Mock Sensor B', isConnectable: true }), 1000);
+            this.scanTimeout = setTimeout(() => {
+                this.stopScan();
+                if (onStop) onStop();
+            }, timeout);
+            return;
+        } else if (!this.manager) {
+            console.error('BLE Manager is not initialized');
+            if (onStop) onStop();
+            return;
+        }
+        
+        const granted = await this.requestBluetoothPermission();
+        if (!granted) {
+            Alert.alert('Bluetooth Permission', 'Please allow Bluetooth in your settings.',[{
+                text: "OK"
+            }]);
+            if (onStop) onStop();
             return;
         }
 
-        if (this.manager) {
-            await this.requestBluetoothPermission();
-            this.manager.startDeviceScan(null, null, (error, device) => {
-                if (device) {
-                    callback(device);
-                }
-            });
-            this.scanTimeout = setTimeout(() => {
-                this.stopScan();
-                onStop?.();
-            }, timeout);
-            return;
-        }
+        this.manager.startDeviceScan(allowedUUIDs, null, callback);
+        this.scanTimeout = setTimeout(() => {
+            this.stopScan();
+            if (onStop) onStop();
+        }, timeout);
+        return;
     }
 
     public stopScan() {
