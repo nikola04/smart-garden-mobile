@@ -12,6 +12,15 @@ export class BLEService {
     private isMock: boolean;
     private scanTimeout: ReturnType<typeof setTimeout> | null = null;
 
+    private static instance: BLEService;
+
+    public static getInstance(): BLEService {
+        if (!BLEService.instance) {
+            BLEService.instance = new BLEService();
+        }
+        return BLEService.instance;
+    }
+
     constructor() {
         this.isMock = __DEV__;
         this.manager = this.isMock ? null : new BleManager();
@@ -66,8 +75,8 @@ export class BLEService {
 
     public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: IStrippedDevice | null) => void, onStop?: () => void) {
         if (this.isMock) {
-            setTimeout(() => callback(null, { id: 'mock-1', name: 'Mock Sensor A', isConnectable: true }), 500);
-            setTimeout(() => callback(null, { id: 'mock-2', name: 'Mock Sensor B', isConnectable: true }), 1000);
+            setTimeout(() => callback(null, { id: 'mock-1', name: 'SmartGarden-Raspberries', isConnectable: true }), 500);
+            setTimeout(() => callback(null, { id: 'mock-2', name: 'SmartGarden-Strawberries', isConnectable: true }), 1000);
             this.scanTimeout = setTimeout(() => {
                 this.stopScan();
                 if (onStop) onStop();

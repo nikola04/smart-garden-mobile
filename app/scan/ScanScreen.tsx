@@ -6,7 +6,7 @@ import { BleErrorCode } from "react-native-ble-plx";
 import { BLEService, IStrippedDevice } from "services/ble.service";
 import { NavigationProp } from "navigation/StackNavigation";
 
-const bleService = new BLEService();
+const bleService = BLEService.getInstance();
 
 export default function ScanScreen() {
     const [state, setState] = useState<'default'|'scanning'|'scanned'|'connecting'>('default')
@@ -187,7 +187,7 @@ function renderDevice(item: IStrippedDevice, handleConnect: () => any, disabled:
     return (
         <Pressable onPress={handleConnect}>
             <View className={`flex flex-row items-center justify-between mx-6 my-1 px-4 py-5 bg-gray-100 rounded-xl ${disabled && 'opacity-45'}`}>
-                <Text className="text-black text-lg font-semibold">{item.name}</Text>
+                <Text className="text-black text-lg font-medium">{item.name}</Text>
                 <ChevronRight/>
             </View>
         </Pressable>
