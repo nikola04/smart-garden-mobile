@@ -97,18 +97,12 @@ export default function ScanScreen() {
         setState('default');
     }
 
-    const handleConnect = useCallback(async (deviceId: string) => {
+    const handleConnect = useCallback(async (device: IStrippedDevice) => {
         if(state !== 'scanned' && state !== 'scanning') return;
         setState('connecting');
         bleService.stopScan();
         // console.log("Connecting to device: " + deviceId)
-        const device = await bleService.getManager()?.connectToDevice(deviceId);
-        if(!device){
-            console.warn("Device not connected")
-            setState('default')
-            return;
-        }
-        navigation.navigate({ name: 'Device', params: device });
+        navigation.navigate({ name: 'Device', params: { device } });
         setState('scanned');
     }, [state, navigation]);
 
@@ -182,16 +176,16 @@ export default function ScanScreen() {
                     className="flex-grow w-full"
                     data={devices}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => renderDevice(item, handleConnect, state === 'connecting')}
+                    renderItem={({ item }) => renderDevice(item, () => handleConnect(item), state === 'connecting')}
                 />
             </Animated.View>
         </SafeAreaView>
     );
 }
 
-function renderDevice(item: IStrippedDevice, handleConnect: (device: string) => any, disabled: boolean) {
+function renderDevice(item: IStrippedDevice, handleConnect: () => any, disabled: boolean) {
     return (
-        <Pressable onPress={() => handleConnect(item.id)}>
+        <Pressable onPress={handleConnect}>
             <View className={`flex flex-row items-center justify-between mx-6 my-1 px-4 py-5 bg-gray-100 rounded-xl ${disabled && 'opacity-45'}`}>
                 <Text className="text-black text-lg font-semibold">{item.name}</Text>
                 <ChevronRight/>

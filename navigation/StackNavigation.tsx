@@ -1,11 +1,11 @@
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import DeviceScreen from 'app/device/DeviceScreen';
 import ScanScreen from 'app/scan/ScanScreen';
-import { Device } from 'react-native-ble-plx';
+import { IStrippedDevice } from 'services/ble.service';
 
 export type RootStackParamList = {
     Pairing: undefined;
-    Device: Device;
+    Device: { device: IStrippedDevice };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

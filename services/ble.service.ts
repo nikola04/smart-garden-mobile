@@ -13,7 +13,7 @@ export class BLEService {
     private scanTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
-        this.isMock = false // __DEV__;
+        this.isMock = __DEV__;
         this.manager = this.isMock ? null : new BleManager();
     }
 
