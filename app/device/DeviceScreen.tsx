@@ -11,7 +11,7 @@ const bleService = BLEService.getInstance();
 export default function DeviceScreen({ route }: StaticScreenProps<{
     device: IStrippedDevice
 }>) {
-    const [state] = useState<'connecting'|'connected'>('connecting');
+    const [state, setState] = useState<'connecting'|'connected'>('connecting');
     const [device, setDevice] = useState<Device|null>(null)
     const params = route.params;
 
@@ -21,6 +21,52 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         return ''
     }, [state]);
 
+    useEffect(() => {
+        let isCancelled = false;
+        let connectedDevice: Device | null = null;
+
+        const connect = async () => {
+            try {
+                connectedDevice = await bleService.connectToDevice(params.device.id) ?? null;
+                if(!connectedDevice){
+                    console.warn('error connecting to device...');
+                    return;
+                }
+                if(isCancelled) return;
+
+                await connectedDevice.discoverAllServicesAndCharacteristics();
+                if(isCancelled) return;
+                setDevice(connectedDevice);
+                setState('connected')
+            }catch(err){
+                console.warn('error connecting to device...', err);
+                return;
+            }
+        }
+        connect();
+
+        return () => {
+            if (connectedDevice) {
+                console.log("Disconnecting from device...");
+                connectedDevice.cancelConnection().catch(err => console.warn("Disconnect failed:", err));
+            }
+        }
+    }, [params.device])
+    
+    return (
+        <SafeAreaView className="flex-1 bg-white">
+            <Text className="font-bold text-base text-center pt-4">{ params.device.name }</Text>
+            <Text className="font-semibold uppercase text-black/50 text-center pt-2">{ dynamicText }</Text>
+            <View className="flex-1 items-center justify-center">
+                { state === 'connecting' && <ConnectingLoader state={state} />}
+            </View>
+        </SafeAreaView>
+    );
+}
+
+function ConnectingLoader({ state }: {
+    state: string
+}){
     const pulseAnimation = useRef(new Animated.Value(0)).current;
     const pulseOpacity = pulseAnimation.interpolate({
         inputRange: [0, 0.5, 1],
@@ -41,54 +87,15 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
 
         return loop.stop;
     }, [pulseAnimation, state]);
-
-    useEffect(() => {
-        const bleManager = bleService.getManager();
-        let isCancelled = false;
-        let connectedDevice: Device | null = null;
-
-        const connect = async () => {
-            try {
-                connectedDevice = await bleManager?.connectToDevice(params.device.id) ?? null;
-                if(!connectedDevice){
-                    console.warn('error connecting to device...');
-                    return;
-                }
-                if(isCancelled) return;
-
-                await connectedDevice.discoverAllServicesAndCharacteristics();
-                if(isCancelled) return;
-                setDevice(connectedDevice);
-            }catch(err){
-                console.warn('error connecting to device...', err);
-                return;
-            }
-        }
-        connect();
-
-        return () => {
-            if (connectedDevice) {
-                console.log("Disconnecting from device...");
-                connectedDevice.cancelConnection().catch(err => console.warn("Disconnect failed:", err));
-            }
-        }
-    }, [params.device])
-    return (
-        <SafeAreaView className="flex-1 bg-white">
-            <Text className="font-bold text-base text-center pt-4">{ params.device.name }</Text>
-            <Text className="font-semibold uppercase text-black/50 text-center pt-2">{ dynamicText }</Text>
-            <View className="flex-1 items-center justify-center">
-                { state === 'connecting' && <Loader className="relative flex-1 items-center justify-center w-full h-full">
-                    <Animated.View className="absolute w-full h-full rounded-full bg-black/[7%]" style={{
-                        transform: [{
-                            scale: pulseAnimation
-                        }],
-                        opacity: pulseOpacity
-                    }}>
-                    </Animated.View>
-                    <BluetoothSearching size={48}/>
-                </Loader> }
-            </View>
-        </SafeAreaView>
-    );
+    
+    return <Loader className="relative flex-1 items-center justify-center w-full h-full">
+        <Animated.View className="absolute w-full h-full rounded-full bg-black/[7%]" style={{
+            transform: [{
+                scale: pulseAnimation
+            }],
+            opacity: pulseOpacity
+        }}>
+        </Animated.View>
+        <BluetoothSearching size={48}/>
+    </Loader> 
 }

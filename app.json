@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "smart-garden-mobile",
+    "name": "Smart Garden",
     "slug": "smart-garden-mobile",
     "version": "1.0.0",
     "web": {
@@ -35,7 +35,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.smartgardenmobile"
+      "bundleIdentifier": "com.anonymous.smartgardenmobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -48,6 +51,11 @@
         "android.permission.BLUETOOTH_CONNECT"
       ],
       "package": "com.anonymous.smartgardenmobile"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1b835061-4122-43fc-af53-04ecd2152c5b"
+      }
     }
   }
 }

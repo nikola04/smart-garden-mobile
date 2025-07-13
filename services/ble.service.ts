@@ -1,5 +1,5 @@
 import { Alert, PermissionsAndroid, Platform } from "react-native";
-import { BleError, BleManager } from "react-native-ble-plx";
+import { BleError, BleManager, Device } from "react-native-ble-plx";
 
 export interface IStrippedDevice {
     id: string;
@@ -22,7 +22,7 @@ export class BLEService {
     }
 
     constructor() {
-        this.isMock = __DEV__;
+        this.isMock = false; // __DEV__;
         this.manager = this.isMock ? null : new BleManager();
     }
 
@@ -110,6 +110,29 @@ export class BLEService {
 
         this.scanTimeout && clearTimeout(this.scanTimeout);
         this.manager?.stopDeviceScan();
+    }
+
+    public async connectToDevice(deviceId: string): Promise<Device | null> {
+        if (this.isMock) {
+            return null;
+        }
+        if (!this.manager) {
+            console.error('BLE Manager is not initialized');
+            return null;
+        }
+
+        try {
+            const isDeviceConnected = await this.manager.isDeviceConnected(deviceId);
+            if (isDeviceConnected) {
+                const devices = await this.manager.devices([deviceId]);
+                return devices.length > 0 ? devices[0] : null;
+            }
+            const device = await this.manager.connectToDevice(deviceId);
+            return device;
+        } catch (error) {
+            console.error('Error connecting to device:', error);
+            return null;
+        }
     }
 
     public destroy(): void {
