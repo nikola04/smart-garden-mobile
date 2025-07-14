@@ -4,6 +4,7 @@ import { IStrippedDevice } from 'services/ble.service';
 import DeviceScreen from 'app/device/DeviceScreen';
 import WiFiConfigScreen from 'app/device/WiFiConfigScreen';
 import APIConfigScreen from 'app/device/APIConfigScreen';
+import colors from 'constants/colors';
 
 export type RootStackParamList = {
     Pairing: undefined,
@@ -20,13 +21,13 @@ export default function RootNavigation() {
     return (
         <Stack.Navigator screenOptions={{
             headerStyle: {
-                backgroundColor: '#fff', // Background color of the header
+                backgroundColor: colors.background, // Background color of the header
                 height: 100,
                 elevation: 0,
                 shadowOpacity: 0,
                 borderBottomWidth: 0, // No border at the bottom of the header
             },
-            headerTintColor: '#999', // Color of the back button and title
+            headerTintColor: colors.foreground, // Color of the back button and title
             headerTitleStyle: {
                 textTransform: 'uppercase',
                 fontWeight: '500', // Style for the header title text

@@ -1,3 +1,4 @@
+import colors from "constants/colors";
 import { PropsWithChildren, useEffect, useRef } from "react";
 import { Animated, Dimensions, Easing, View, ViewProps } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -56,7 +57,7 @@ export default function Loader({ children, ...rest }: PropsWithChildren<ViewProp
         <Animated.View className="absolute" style={{ transform: [{ rotate: rotateInterpolate }] }}>
             <Svg width={size} height={size}>
                 <AnimatedCircle
-                    stroke="black"
+                    stroke={colors.primary}
                     fill="none"
                     cx={size / 2}
                     cy={size / 2}

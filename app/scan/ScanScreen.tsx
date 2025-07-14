@@ -144,12 +144,12 @@ export default function ScanScreen() {
         }
     }, [animateButton, layoutAnimation, pulseAnimation, state])
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            <Text className="font-bold uppercase text-center pt-4">{ dynamicText }</Text>
+        <SafeAreaView className="flex-1 bg-background text-foreground">
+            <Text className="font-bold uppercase text-foreground text-center pt-4">{ dynamicText }</Text>
             <Animated.View className="items-center justify-center" style={{
                 flex: buttonFlex
             }}>
-                <Animated.View className="absolute w-56 h-56 bg-black/10 rounded-full" style={{
+                <Animated.View className="absolute w-56 h-56 bg-primary/25 rounded-full" style={{
                     transform: [{
                         scale: pulseAnimation
                     }],
@@ -159,7 +159,7 @@ export default function ScanScreen() {
                     })
                 }} />
                 <Pressable onPress={handleScan} onLongPress={handleScanReset}>
-                    <Animated.View className="bg-black rounded-full w-28 h-28 items-center justify-center" style={{
+                    <Animated.View className="bg-primary rounded-full w-28 h-28 items-center justify-center" style={{
                         transform: [{
                             scale: buttonAnimation
                         }]
@@ -187,8 +187,8 @@ export default function ScanScreen() {
 function renderDevice(item: IStrippedDevice, handleConnect: () => any, disabled: boolean) {
     return (
         <Pressable onPress={handleConnect}>
-            <View className={`flex flex-row items-center justify-between mx-6 my-1 px-4 py-5 bg-gray-100 rounded-xl ${disabled && 'opacity-45'}`}>
-                <Text className="text-black text-lg font-medium">{item.name}</Text>
+            <View className={`flex flex-row items-center justify-between mx-6 my-1 px-4 py-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
+                <Text className="text-foreground text-lg font-medium">{item.name}</Text>
                 <ChevronRight/>
             </View>
         </Pressable>
