@@ -4,14 +4,15 @@ import { Pressable, FlatList, SafeAreaView, Text, View, Animated, Easing, Alert 
 import { useNavigation } from '@react-navigation/native'
 import { BleErrorCode } from "react-native-ble-plx";
 import { BLEService, IStrippedDevice } from "services/ble.service";
-import { NavigationProp } from "navigation/StackNavigation";
+import { config } from "constants/config";
+import { RootNavigationProp } from "navigation/RootNavigation";
 
 const bleService = BLEService.getInstance();
 
 export default function ScanScreen() {
     const [state, setState] = useState<'default'|'scanning'|'scanned'|'connecting'>('default')
     const [devices, setDevices] = useState<IStrippedDevice[]>([]);
-    const navigation = useNavigation<NavigationProp>();
+    const navigation = useNavigation<RootNavigationProp>();
 
     const pulseAnimation = useRef(new Animated.Value(0)).current;
     const buttonAnimation = useRef(new Animated.Value(1)).current;
@@ -22,7 +23,7 @@ export default function ScanScreen() {
         if(state === 'scanning') return 'Scanning...';
         if(state === 'scanned') return 'Select Device';
         if(state === 'connecting') return 'Connecting...';
-        return ''
+        return '';
     }, [state]);
 
     const buttonFlex = layoutAnimation.interpolate({
@@ -64,7 +65,7 @@ export default function ScanScreen() {
         setDevices([]);
         setState('scanning')
         animateButton()
-        bleService.startScan([], 5000, (err, device) => {
+        bleService.startScan(config.allowedServiceUUIDs, 5000, (err, device) => {
             if(err) {
                 if(err.errorCode === BleErrorCode.BluetoothPoweredOff){
                     Alert.alert('Bluetooth is Off', 'Please enable Bluetooth in your settings.',[{
@@ -102,7 +103,7 @@ export default function ScanScreen() {
         setState('connecting');
         bleService.stopScan();
         // console.log("Connecting to device: " + deviceId)
-        navigation.navigate({ name: 'Device', params: { device } });
+        navigation.navigate('Device', { device });
         setState('scanned');
     }, [state, navigation]);
 

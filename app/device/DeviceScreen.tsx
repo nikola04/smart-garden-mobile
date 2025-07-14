@@ -1,22 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, SafeAreaView, Text, View } from "react-native";
-import type { StaticScreenProps } from '@react-navigation/native';
+import {  useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Pressable, SafeAreaView, Text, View } from "react-native";
+import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { BluetoothSearching } from "lucide-react-native";
+import { BluetoothSearching, ChevronRight } from "lucide-react-native";
 import { BLEService, IStrippedDevice } from "services/ble.service";
 import { Device } from "react-native-ble-plx";
+import { RootNavigationProp } from "navigation/RootNavigation";
 
 const bleService = BLEService.getInstance();
 
 export default function DeviceScreen({ route }: StaticScreenProps<{
     device: IStrippedDevice
 }>) {
-    const [state, setState] = useState<'connecting'|'connected'>('connecting');
-    const [device, setDevice] = useState<Device|null>(null)
+    const [state, setState] = useState<'connecting'|'loading'|'connected'>('connecting');
+    const navigation = useNavigation<RootNavigationProp>();
     const params = route.params;
 
     const dynamicText = useMemo(() => {
         if(state === 'connecting') return 'Connecting...';
+        if(state === 'loading') return 'Loading...';
         if(state === 'connected') return 'Connected';
         return ''
     }, [state]);
@@ -36,7 +38,9 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
 
                 await connectedDevice.discoverAllServicesAndCharacteristics();
                 if(isCancelled) return;
-                setDevice(connectedDevice);
+                setState('loading');
+
+                // setDeviceConfig(configResponse)
                 setState('connected')
             }catch(err){
                 console.warn('error connecting to device...', err);
@@ -47,21 +51,41 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
 
         return () => {
             if (connectedDevice) {
+                isCancelled = true;
                 console.log("Disconnecting from device...");
-                connectedDevice.cancelConnection().catch(err => console.warn("Disconnect failed:", err));
+                bleService.disconnectFromDevice();
             }
         }
     }, [params.device])
-    
+
+    const navigateWifiConfig = () => navigation.navigate('WiFi Configuration');
+    const navigateAPIConfig = () => navigation.navigate('API Configuration');
+     
     return (
         <SafeAreaView className="flex-1 bg-white">
             <Text className="font-bold text-base text-center pt-4">{ params.device.name }</Text>
             <Text className="font-semibold uppercase text-black/50 text-center pt-2">{ dynamicText }</Text>
-            <View className="flex-1 items-center justify-center">
-                { state === 'connecting' && <ConnectingLoader state={state} />}
-            </View>
+            { state === 'connecting' && <View className="flex-1 items-center justify-center">
+                <ConnectingLoader state={state} />
+            </View> }
+            { state === 'connected' && <View className="flex-1 py-16 px-6 gap-4 bg-white">
+                <ConfigButton name="WiFi Configuration" onPress={navigateWifiConfig} />
+                <ConfigButton name="API Configuration" onPress={navigateAPIConfig} />
+            </View> }
         </SafeAreaView>
     );
+}
+
+function ConfigButton({ name, onPress }: {
+    name: string,
+    onPress: () => any
+}){
+    return <Pressable onPress={onPress}>
+        <View className="flex flex-row items-center justify-between p-4 bg-black/5 rounded-lg">
+            <Text>{ name }</Text>
+            <ChevronRight />
+        </View>
+    </Pressable>
 }
 
 function ConnectingLoader({ state }: {

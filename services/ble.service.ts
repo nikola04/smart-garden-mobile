@@ -1,5 +1,7 @@
+import { config } from "constants/config";
 import { Alert, PermissionsAndroid, Platform } from "react-native";
 import { BleError, BleManager, Device } from "react-native-ble-plx";
+import { Buffer } from 'buffer';
 
 export interface IStrippedDevice {
     id: string;
@@ -8,9 +10,9 @@ export interface IStrippedDevice {
 }
 
 export class BLEService {
-    private manager: BleManager | null;
-    private isMock: boolean;
+    private manager: BleManager;
     private scanTimeout: ReturnType<typeof setTimeout> | null = null;
+    private connectedDevice: Device | null = null;
 
     private static instance: BLEService;
 
@@ -22,8 +24,7 @@ export class BLEService {
     }
 
     constructor() {
-        this.isMock = false; // __DEV__;
-        this.manager = this.isMock ? null : new BleManager();
+        this.manager = new BleManager();
     }
 
     public getManager(): BleManager | null {
@@ -31,8 +32,6 @@ export class BLEService {
     }
 
     public requestBluetoothPermission = async () => {
-        if (this.isMock) return true;
-
         if (Platform.OS === 'ios') return true;
         if (Platform.OS === 'android' && PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION) {
             const apiLevel = parseInt(Platform.Version.toString(), 10);
@@ -64,30 +63,11 @@ export class BLEService {
     };
 
     public async isBluetoothEnabled(): Promise<boolean> {
-        if (this.isMock) return true;
-        if (!this.manager) {
-            console.error('BLE Manager is not initialized');
-            return false;
-        }
         const state = await this.manager.state();
         return state === 'PoweredOn';
     }
 
     public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: IStrippedDevice | null) => void, onStop?: () => void) {
-        if (this.isMock) {
-            setTimeout(() => callback(null, { id: 'mock-1', name: 'SmartGarden-Raspberries', isConnectable: true }), 500);
-            setTimeout(() => callback(null, { id: 'mock-2', name: 'SmartGarden-Strawberries', isConnectable: true }), 1000);
-            this.scanTimeout = setTimeout(() => {
-                this.stopScan();
-                if (onStop) onStop();
-            }, timeout);
-            return;
-        } else if (!this.manager) {
-            console.error('BLE Manager is not initialized');
-            if (onStop) onStop();
-            return;
-        }
-        
         const granted = await this.requestBluetoothPermission();
         if (!granted) {
             Alert.alert('Bluetooth Permission', 'Please allow Bluetooth in your settings.',[{
@@ -106,39 +86,76 @@ export class BLEService {
     }
 
     public stopScan() {
-        if (this.isMock) return;
-
         this.scanTimeout && clearTimeout(this.scanTimeout);
-        this.manager?.stopDeviceScan();
+        this.manager.stopDeviceScan();
     }
 
     public async connectToDevice(deviceId: string): Promise<Device | null> {
-        if (this.isMock) {
-            return null;
-        }
-        if (!this.manager) {
-            console.error('BLE Manager is not initialized');
-            return null;
-        }
-
         try {
             const isDeviceConnected = await this.manager.isDeviceConnected(deviceId);
             if (isDeviceConnected) {
                 const devices = await this.manager.devices([deviceId]);
-                return devices.length > 0 ? devices[0] : null;
-            }
-            const device = await this.manager.connectToDevice(deviceId);
-            return device;
+                this.connectedDevice = devices.length > 0 ? devices[0] : null;
+            }else this.connectedDevice = await this.manager.connectToDevice(deviceId);
+
+            return this.connectedDevice;
         } catch (error) {
             console.error('Error connecting to device:', error);
             return null;
         }
     }
 
-    public destroy(): void {
-        if (!this.isMock && this.manager) {
-            this.scanTimeout && clearTimeout(this.scanTimeout);
-            this.manager.destroy();
+    public async disconnectFromDevice(): Promise<void> {
+        if (this.connectedDevice) {
+            try {
+                await this.manager.cancelDeviceConnection(this.connectedDevice.id);
+                this.connectedDevice = null;
+            } catch (error) {
+                console.error('Error disconnecting from device:', error);
+            }
         }
+    }
+
+    public async readCharacteristicForService(serviceUUID: string, characteristicUUID: string): Promise<string | null> {
+        if (!this.connectedDevice) {
+            console.error('No connected device to read from.');
+            return null;
+        }
+        try {
+            const characteristic = await this.connectedDevice?.readCharacteristicForService(serviceUUID, characteristicUUID);
+
+            const base64Value = characteristic?.value;
+            if (!base64Value) return null;
+
+            const response = Buffer.from(base64Value, 'base64').toString('utf-8');
+            return response ?? null;
+        } catch (error) {
+            console.error('Error reading characteristic:', error);
+            return null;
+        }
+    }
+
+    public async writeCharacteristicWithResponseForService(serviceUUID: string, characteristicUUID: string, value: string): Promise<string | null> {
+        if(!this.connectedDevice) {
+            console.error('No connected device to write to.');
+            return null;
+        }
+        try {
+            const base64Request = Buffer.from(value, 'utf-8').toString('base64');
+            const characteristic = await this.connectedDevice?.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, base64Request);
+
+            if (!characteristic?.value) return null;
+
+            const response = Buffer.from(characteristic.value, 'base64').toString('utf-8');
+            return response ?? null;
+        } catch (error) {
+            console.error('Error writing characteristic:', error);
+            return null;
+        }
+    }
+
+    public destroy(): void {
+        if (this.scanTimeout) clearTimeout(this.scanTimeout);
+        this.manager.destroy();
     }
 }

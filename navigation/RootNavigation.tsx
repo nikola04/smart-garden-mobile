@@ -1,16 +1,22 @@
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
-import DeviceScreen from 'app/device/DeviceScreen';
 import ScanScreen from 'app/scan/ScanScreen';
 import { IStrippedDevice } from 'services/ble.service';
+import DeviceScreen from 'app/device/DeviceScreen';
+import WiFiConfigScreen from 'app/device/WiFiConfigScreen';
+import APIConfigScreen from 'app/device/APIConfigScreen';
 
 export type RootStackParamList = {
-    Pairing: undefined;
+    Pairing: undefined,
     Device: { device: IStrippedDevice };
+    'WiFi Configuration': undefined,
+    'API Configuration': undefined
 };
+
+export type RootNavigationProp = StackNavigationProp<RootStackParamList, 'Pairing'>;
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-export default function StackNavigation() {
+export default function RootNavigation() {
     return (
         <Stack.Navigator screenOptions={{
             headerStyle: {
@@ -29,9 +35,18 @@ export default function StackNavigation() {
             },
         }}>
             <Stack.Screen name="Pairing" component={ScanScreen} />
-            <Stack.Screen name="Device" component={DeviceScreen} />
+            <Stack.Screen
+                name="Device"
+                component={DeviceScreen}
+            />
+            <Stack.Screen
+                name="WiFi Configuration"
+                component={WiFiConfigScreen}
+            />
+            <Stack.Screen
+                name="API Configuration"
+                component={APIConfigScreen}
+            />
         </Stack.Navigator>
     );
 }
-
-export type NavigationProp = StackNavigationProp<RootStackParamList, 'Pairing'>;
