@@ -2,7 +2,7 @@ import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, Pressable, SafeAreaView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { BluetoothSearching, ChevronRight, ServerCog, WifiCog } from "lucide-react-native";
+import { BluetoothSearching, ChevronRight, MonitorCog, ServerCog, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
 import { Device } from "react-native-ble-plx";
 import { RootNavigationProp } from "navigation/RootNavigation";
@@ -71,6 +71,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         }
     }, [params.device])
 
+    const navigateDeviceConfig = () => navigation.navigate('Device Configuration');
     const navigateWifiConfig = () => navigation.navigate('WiFi Configuration');
     const navigateAPIConfig = () => navigation.navigate('API Configuration');
      
@@ -82,10 +83,13 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
                 <ConnectingLoader state={state} />
             </View> }
             { state === 'connected' && <View className="flex-1 py-16 px-6 gap-4">
-                <ConfigButton name="Wi-Fi Configuration" onPress={navigateWifiConfig} >
+                <ConfigButton name="Device" onPress={navigateDeviceConfig} >
+                    <MonitorCog color={colors.foreground} size={16} />
+                </ConfigButton>
+                <ConfigButton name="Wi-Fi" onPress={navigateWifiConfig} >
                     <WifiCog color={colors.foreground} size={16} />
                 </ConfigButton>
-                <ConfigButton name="API Configuration" onPress={navigateAPIConfig} >
+                <ConfigButton name="API" onPress={navigateAPIConfig} >
                     <ServerCog color={colors.foreground} size={16} />
                 </ConfigButton>
             </View> }

@@ -5,12 +5,14 @@ import DeviceScreen from 'app/device/DeviceScreen';
 import WiFiConfigScreen from 'app/device/WiFiConfigScreen';
 import APIConfigScreen from 'app/device/APIConfigScreen';
 import colors from 'constants/colors';
+import DeviceConfigScreen from 'app/device/DeviceConfigScreen';
 
 export type RootStackParamList = {
     Pairing: undefined,
     Device: { device: IStrippedDevice };
     'WiFi Configuration': undefined,
-    'API Configuration': undefined
+    'Device Configuration': undefined,
+    'API Configuration': undefined,
 };
 
 export type RootNavigationProp = StackNavigationProp<RootStackParamList, 'Pairing'>;
@@ -39,6 +41,10 @@ export default function RootNavigation() {
             <Stack.Screen
                 name="Device"
                 component={DeviceScreen}
+            />
+            <Stack.Screen
+                name="Device Configuration"
+                component={DeviceConfigScreen}
             />
             <Stack.Screen
                 name="WiFi Configuration"

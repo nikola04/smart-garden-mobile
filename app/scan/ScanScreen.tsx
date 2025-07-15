@@ -170,8 +170,8 @@ export default function ScanScreen() {
                 </Pressable>
             </Animated.View>
             { state === 'scanned' && devices.length === 0 && <View className="gap-2">
-                <Text className="uppercase font-bold text-center text-[13px]">No nearby devices found.</Text>
-                <Text className="text-center">Are you holding button on your device?</Text>
+                <Text className="uppercase font-bold text-foreground text-center text-[13px]">No nearby devices found.</Text>
+                <Text className="text-foreground/80 text-center">Are you holding button on your device?</Text>
             </View> }
             <Animated.View style={{ flex: listFlex }}>
                 <FlatList
