@@ -6,6 +6,7 @@ import { BleErrorCode } from "react-native-ble-plx";
 import { BLEService, IStrippedDevice } from "services/ble.service";
 import { config } from "constants/config";
 import { RootNavigationProp } from "navigation/RootNavigation";
+import colors from "constants/colors";
 
 const bleService = BLEService.getInstance();
 
@@ -177,20 +178,41 @@ export default function ScanScreen() {
                     className="flex-grow w-full"
                     data={devices}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => renderDevice(item, () => handleConnect(item), state === 'connecting')}
+                    renderItem={({ item }) => <RenderDevice item={item} handleConnect={() => handleConnect(item)} disabled={state === 'connecting'}/>}
                 />
             </Animated.View>
         </SafeAreaView>
     );
 }
 
-function renderDevice(item: IStrippedDevice, handleConnect: () => any, disabled: boolean) {
+function RenderDevice({ item, handleConnect, disabled }:{
+    item: IStrippedDevice,
+    handleConnect: () => any,
+    disabled: boolean
+}) {
+    const pressAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.timing(pressAnim, {
+            toValue: 0.85, // zatamnjenje
+            duration: 100,
+            useNativeDriver: true,
+        }).start();
+    };
+    const handlePressOut = () => {
+        Animated.timing(pressAnim, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+        }).start();
+    };
+
     return (
-        <Pressable onPress={handleConnect}>
-            <View className={`flex flex-row items-center justify-between mx-6 my-1 px-4 py-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
-                <Text className="text-foreground text-lg font-medium">{item.name}</Text>
-                <ChevronRight/>
-            </View>
+        <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={handleConnect}>
+            <Animated.View style={{ opacity: pressAnim }} className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
+                <Text className="text-foreground text-base font-medium">{item.name}</Text>
+                <ChevronRight size={22} color={colors.foreground}/>
+            </Animated.View>
         </Pressable>
     );
 }

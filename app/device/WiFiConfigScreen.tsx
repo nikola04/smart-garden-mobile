@@ -91,14 +91,14 @@ export default function WiFiConfigScreen(){
                 <View className="gap-8">
                     <ConfigField
                         title="SSID"
-                        placeholder="WiFi name..."
+                        placeholder="Name..."
                         value={ssid}
                         setValue={setSSID}
                     />
                     <ConfigField
                         title="Password"
                         desc="Old password won&apos;t be shown here!"
-                        placeholder="xxxxxxxxxxxxxxxxxxxxxxxxx..."
+                        placeholder="Password..."
                         value={pswd}
                         setValue={setPswd}
                         secureEntry={true}

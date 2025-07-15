@@ -1,4 +1,3 @@
-import { config } from "constants/config";
 import { Alert, PermissionsAndroid, Platform } from "react-native";
 import { BleError, BleManager, Device } from "react-native-ble-plx";
 import { Buffer } from 'buffer';
@@ -9,10 +8,18 @@ export interface IStrippedDevice {
     isConnectable: boolean|null;
 }
 
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+export type StateListener = (state: 'connecting' | 'connected' | 'disconnected' | 'reconnecting') => void;
+
 export class BLEService {
     private manager: BleManager;
     private scanTimeout: ReturnType<typeof setTimeout> | null = null;
     private connectedDevice: Device | null = null;
+    private lastConnectedDeviceId: string | null = null;
+    private manuallyDisconnected = false;
+    private listeners: (StateListener)[];
+    private disconnecting: Promise<void | Device> | null = null;
+    private connecting = false;
 
     private static instance: BLEService;
 
@@ -25,6 +32,7 @@ export class BLEService {
 
     constructor() {
         this.manager = new BleManager();
+        this.listeners = [];
     }
 
     public getManager(): BleManager | null {
@@ -92,28 +100,90 @@ export class BLEService {
 
     public async connectToDevice(deviceId: string): Promise<Device | null> {
         try {
+            if(this.disconnecting) await this.disconnecting;
+            if(this.connecting) return null;
+            this.connecting = true;
+
             const isDeviceConnected = await this.manager.isDeviceConnected(deviceId);
             if (isDeviceConnected) {
                 const devices = await this.manager.devices([deviceId]);
+                console.log('connected already', devices)
                 this.connectedDevice = devices.length > 0 ? devices[0] : null;
             }else this.connectedDevice = await this.manager.connectToDevice(deviceId);
 
+            if(this.connectedDevice){
+                this.notifyStateChange('connected');
+                this.connectedDevice.onDisconnected((err) => {
+                    if(this.manuallyDisconnected){
+                        this.manuallyDisconnected = false;
+                        this.notifyStateChange('disconnected')
+                        return;
+                    }
+                    this.attemptReconnect();
+                });
+            }
+
+            this.lastConnectedDeviceId = this.connectedDevice?.id ?? null;
+            this.connecting = false;
             return this.connectedDevice;
         } catch (error) {
             console.error('Error connecting to device:', error);
+            this.connecting = false;
             return null;
         }
     }
 
     public async disconnectFromDevice(): Promise<void> {
         if (this.connectedDevice) {
-            try {
-                await this.manager.cancelDeviceConnection(this.connectedDevice.id);
+            this.manuallyDisconnected = true;
+            const device = this.connectedDevice;
+            this.disconnecting = this.manager.cancelDeviceConnection(device.id).catch((err) => {
+                console.error('Error disconnecting from device:', err);
+            }).finally(() => {
+                console.log('done', this.connectedDevice)
                 this.connectedDevice = null;
-            } catch (error) {
-                console.error('Error disconnecting from device:', error);
-            }
+                console.log('done', this.connectedDevice)
+                this.notifyStateChange('disconnected');
+                this.disconnecting = null;
+            })
+
+            await this.disconnecting;
         }
+    }
+
+    private async attemptReconnect() {
+        if(this.connecting || !this.lastConnectedDeviceId)
+            return;
+        this.connecting = true;
+
+        try{
+            this.notifyStateChange('reconnecting');
+            this.connectedDevice = await this.manager.connectToDevice(this.lastConnectedDeviceId);
+            if(this.connectedDevice){
+                this.notifyStateChange('connected');
+            } else {
+                this.notifyStateChange('disconnected');
+                this.connectedDevice = null;
+            }
+        } catch(err){
+            this.notifyStateChange('disconnected');
+            this.connectedDevice = null;
+            console.warn('error while reconnecting', err);
+        }finally{
+            this.connecting = false;
+        }
+    }
+
+    public async addConnectionStateListener(listener: StateListener){
+        this.listeners.push(listener);
+    }
+
+    public async removeConnectionStateListener(listener: StateListener){
+        this.listeners = this.listeners.filter(l => l !== listener);
+    }
+
+    private notifyStateChange(state: ConnectionState) {
+        this.listeners.forEach(listener => listener(state));
     }
 
     public async readCharacteristicForService(serviceUUID: string, characteristicUUID: string): Promise<string | null> {
