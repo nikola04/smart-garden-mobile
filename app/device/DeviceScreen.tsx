@@ -4,7 +4,6 @@ import { useNavigation, type StaticScreenProps } from '@react-navigation/native'
 import Loader from "components/Loader";
 import { Battery, Bluetooth, BluetoothSearching, ChevronRight, LucideIcon, MonitorCog, ServerCog, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
-import { Device } from "react-native-ble-plx";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
 import { AnimatedPressable } from "components/AnimatedPressable";
@@ -38,37 +37,29 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     }, [state]);
 
     useEffect(() => {
-        let isCancelled = false;
-        let connectedDevice: Device | null = null;
-
-        bleService.addConnectionStateListener((state) => {
+        const stateHandler = (state: ConnectionState) => {
             setState(state)
-        })
+        }
+        bleService.addConnectionStateListener(stateHandler);
 
         const connect = async () => {
             try {
-                setState('connecting')
-                connectedDevice = await bleService.connectToDevice(params.device.id) ?? null;
+                const connectedDevice = await bleService.connectToDevice(params.device.id) ?? null;
                 if(!connectedDevice){
-                    console.warn('error connecting to device...');
+                    console.warn('device null...');
                     return;
                 }
-                if(isCancelled) return;
-
-                await connectedDevice.discoverAllServicesAndCharacteristics();
             }catch(err){
                 console.warn('error connecting to device...', err);
                 return;
             }
         }
+
         connect();
 
         return () => {
-            if (connectedDevice) {
-                isCancelled = true;
-                console.log("Disconnecting from device...");
-                bleService.disconnectFromDevice();
-            }
+            bleService.removeConnectionStateListener(stateHandler);
+            bleService.disconnectFromDevice();
         }
     }, [params.device])
 

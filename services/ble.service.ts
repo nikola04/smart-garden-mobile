@@ -1,5 +1,5 @@
 import { Alert, PermissionsAndroid, Platform } from "react-native";
-import { BleError, BleManager, Device } from "react-native-ble-plx";
+import { BleError, BleManager, Device, Subscription } from "react-native-ble-plx";
 import { Buffer } from 'buffer';
 
 export interface IStrippedDevice {
@@ -16,10 +16,11 @@ export class BLEService {
     private scanTimeout: ReturnType<typeof setTimeout> | null = null;
     private connectedDevice: Device | null = null;
     private lastConnectedDeviceId: string | null = null;
-    private manuallyDisconnected = false;
     private listeners: (StateListener)[];
     private disconnecting: Promise<void | Device> | null = null;
+    private lastDisconnect = 0;
     private connecting = false;
+    private disconnectSubscription: Subscription | null = null;
 
     private static instance: BLEService;
 
@@ -33,42 +34,12 @@ export class BLEService {
     constructor() {
         this.manager = new BleManager();
         this.listeners = [];
+        this.disconnectHandler = this.disconnectHandler.bind(this);
     }
 
     public getManager(): BleManager | null {
         return this.manager;
     }
-
-    public requestBluetoothPermission = async () => {
-        if (Platform.OS === 'ios') return true;
-        if (Platform.OS === 'android' && PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION) {
-            const apiLevel = parseInt(Platform.Version.toString(), 10);
-
-            if (apiLevel < 31) {
-                const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-                );
-                return granted === PermissionsAndroid.RESULTS.GRANTED;
-            }
-
-            if (PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN && PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT) {
-                const result = await PermissionsAndroid.requestMultiple([
-                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                ]);
-
-                return (
-                    result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED &&
-                    result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
-                    result['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED
-                );
-            }
-        }
-
-        console.error('Permission has not been granted');
-        return false;
-    };
 
     public async isBluetoothEnabled(): Promise<boolean> {
         const state = await this.manager.state();
@@ -76,7 +47,7 @@ export class BLEService {
     }
 
     public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: IStrippedDevice | null) => void, onStop?: () => void) {
-        const granted = await this.requestBluetoothPermission();
+        const granted = await requestBluetoothPermission();
         if (!granted) {
             Alert.alert('Bluetooth Permission', 'Please allow Bluetooth in your settings.',[{
                 text: "OK"
@@ -98,77 +69,106 @@ export class BLEService {
         this.manager.stopDeviceScan();
     }
 
+    private async disconnectHandler(err: BleError | null, device: Device){
+        this.lastDisconnect = Date.now();
+        this.notifyStateChange('disconnected')
+        this.attemptReconnect();
+    }
+
     public async connectToDevice(deviceId: string): Promise<Device | null> {
         try {
-            if(this.disconnecting) await this.disconnecting;
-            if(this.connecting) return null;
+            if(this.connecting) // if connecting or connected already, cancel that connection
+                await this.disconnectFromDevice();
             this.connecting = true;
 
+            this.notifyStateChange("connecting") // update state
+            if(this.disconnecting) { // if still disconnecting wait to finish
+                await this.disconnecting;
+                this.notifyStateChange("connecting") // update state because of on disconnect state change
+            }
+
+            // THIS CODE IS POTENTIALY CAUSING BUG WHEN DISCONNECT WHILE WAITING HERE TO CONNECT
+            // 
+            // const hold = 1000 - (Date.now() - this.lastDisconnect); // because of device potential issues hold for at least 1s after disconnect
+            // if(hold > 0)
+            //     await new Promise(resolve => setTimeout(resolve, hold));
+
+            this.connectedDevice = null;
             const isDeviceConnected = await this.manager.isDeviceConnected(deviceId);
-            if (isDeviceConnected) {
+            if (isDeviceConnected) { // if already connected somehow? should be removed probably, idk...
                 const devices = await this.manager.devices([deviceId]);
-                console.log('connected already', devices)
                 this.connectedDevice = devices.length > 0 ? devices[0] : null;
             }else this.connectedDevice = await this.manager.connectToDevice(deviceId);
 
-            if(this.connectedDevice){
+            if(this.connectedDevice) { // if device connected successfully
+                await this.connectedDevice.discoverAllServicesAndCharacteristics();
                 this.notifyStateChange('connected');
-                this.connectedDevice.onDisconnected((err) => {
-                    if(this.manuallyDisconnected){
-                        this.manuallyDisconnected = false;
-                        this.notifyStateChange('disconnected')
-                        return;
-                    }
-                    this.attemptReconnect();
-                });
+
+                if(this.disconnectSubscription) this.disconnectSubscription.remove(); // remove old and add new subscription
+                this.disconnectSubscription = this.connectedDevice.onDisconnected(this.disconnectHandler)
+            }else { // on not connected
+                this.notifyStateChange('disconnected');
             }
 
             this.lastConnectedDeviceId = this.connectedDevice?.id ?? null;
             this.connecting = false;
             return this.connectedDevice;
         } catch (error) {
-            console.error('Error connecting to device:', error);
+            console.warn('[ble.service.ts]connectToDevice:', error); // if this one occures, can be due to cancellation in parallel connection
+            this.notifyStateChange('disconnected')
             this.connecting = false;
             return null;
         }
     }
 
     public async disconnectFromDevice(): Promise<void> {
-        if (this.connectedDevice) {
-            this.manuallyDisconnected = true;
-            const device = this.connectedDevice;
-            this.disconnecting = this.manager.cancelDeviceConnection(device.id).catch((err) => {
-                console.error('Error disconnecting from device:', err);
-            }).finally(() => {
-                console.log('done', this.connectedDevice)
-                this.connectedDevice = null;
-                console.log('done', this.connectedDevice)
-                this.notifyStateChange('disconnected');
-                this.disconnecting = null;
-            })
+        if (!this.connectedDevice) 
+            return;
 
+        try{
+            const device = this.connectedDevice;
+            if(this.disconnectSubscription) this.disconnectSubscription.remove(); // remove it before it disconnects so attemptReconnect wont be called on manually disconnected device
+            this.disconnecting = this.manager.cancelDeviceConnection(device.id).catch((err) => {
+                console.warn('[ble.service.ts]disconnectFromDevice catched:', err); // can be canceled if error occures
+            }).finally(() => {
+                this.connectedDevice = null;
+                this.disconnecting = null;
+                this.notifyStateChange('disconnected');
+            })
             await this.disconnecting;
+        }catch(err){
+            console.error('[ble.service.ts]disconnectFromDevice:', err);
         }
     }
 
     private async attemptReconnect() {
-        if(this.connecting || !this.lastConnectedDeviceId)
+        if(!this.lastConnectedDeviceId)
             return;
-        this.connecting = true;
+
+        this.notifyStateChange('reconnecting');
+        
+        if(this.disconnecting) {
+            console.warn('waiting for disconnect in reconnect?')
+            await this.disconnecting;
+            this.notifyStateChange('reconnecting');
+        }
 
         try{
-            this.notifyStateChange('reconnecting');
             this.connectedDevice = await this.manager.connectToDevice(this.lastConnectedDeviceId);
             if(this.connectedDevice){
+                await this.connectedDevice.discoverAllServicesAndCharacteristics();
                 this.notifyStateChange('connected');
+
+                if(this.disconnectSubscription) this.disconnectSubscription.remove();
+                this.disconnectSubscription = this.connectedDevice.onDisconnected(this.disconnectHandler);
             } else {
                 this.notifyStateChange('disconnected');
                 this.connectedDevice = null;
             }
         } catch(err){
+            console.warn('[ble.service.ts]attemptReconnect:', err); // this one can also be due to cancelation in parallel connection
             this.notifyStateChange('disconnected');
             this.connectedDevice = null;
-            console.warn('error while reconnecting', err);
         }finally{
             this.connecting = false;
         }
@@ -199,8 +199,8 @@ export class BLEService {
 
             const response = Buffer.from(base64Value, 'base64').toString('utf-8');
             return response ?? null;
-        } catch (error) {
-            console.error('Error reading characteristic:', error);
+        } catch (err) {
+            console.error('[ble.service.ts]readCharacteristicForService:', err);
             return null;
         }
     }
@@ -219,13 +219,44 @@ export class BLEService {
             const response = Buffer.from(characteristic.value, 'base64').toString('utf-8');
             return response ?? null;
         } catch (error) {
-            console.error('Error writing characteristic:', error);
+            console.error('[ble.service.ts]writeCharacteristicWithResponseForService:', error);
             return null;
         }
     }
 
     public destroy(): void {
         if (this.scanTimeout) clearTimeout(this.scanTimeout);
+
+        this.disconnectSubscription?.remove();
         this.manager.destroy();
     }
 }
+
+const requestBluetoothPermission = async () => {
+    if (Platform.OS === 'ios') return true;
+    if (Platform.OS === 'android' && PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION) {
+        const apiLevel = parseInt(Platform.Version.toString(), 10);
+
+        if (apiLevel < 31) {
+            const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+            return granted === PermissionsAndroid.RESULTS.GRANTED;
+        }
+
+        if (PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN && PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT) {
+            const result = await PermissionsAndroid.requestMultiple([
+                PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            ]);
+
+            return (
+                result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED &&
+                result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+                result['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED
+            );
+        }
+    }
+
+    console.error('Permission has not been granted');
+    return false;
+};
