@@ -2,8 +2,7 @@ import Button from "components/Button";
 import { config } from "constants/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
-import Toast from "react-native-toast-message";
+import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import { BLEService } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import ConfigField from "components/ConfigButton";
@@ -28,14 +27,9 @@ export default function DeviceConfigScreen(){
                 device_name: name
             });
 
-            const response = await bleService.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, JSON.stringify(data));
+            await bleService.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, JSON.stringify(data));
             if(isCanceled.current) return;
-            Toast.show({
-                type: 'success',
-                text1: 'Hello',
-                text2: 'This is some something 👋'
-            });
-            console.log(response);
+            Alert.alert('Device name is updated successfully.')
             navigation.goBack();
         }catch(err){
             console.log(err)
