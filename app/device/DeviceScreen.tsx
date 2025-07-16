@@ -1,12 +1,13 @@
 import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Pressable, SafeAreaView, Text, View } from "react-native";
+import { Animated, Easing, PressableProps, SafeAreaView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { BluetoothSearching, ChevronRight, MonitorCog, ServerCog, WifiCog } from "lucide-react-native";
+import { Battery, Bluetooth, BluetoothSearching, ChevronRight, LucideIcon, MonitorCog, ServerCog, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
 import { Device } from "react-native-ble-plx";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
+import { AnimatedPressable } from "components/AnimatedPressable";
 
 const bleService = BLEService.getInstance();
 
@@ -77,57 +78,66 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
      
     return (
         <SafeAreaView className="flex-1 bg-background">
-            <Text className="font-bold text-base text-center text-foreground pt-4">{ params.device.name }</Text>
-            <Text className="font-semibold uppercase text-center pt-2" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>
+            <View className="flex gap-2 py-8">
+                <Text className="font-bold text-base text-center text-foreground">{ params.device.name }</Text>
+                <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>
+            </View>
             { (state === 'connecting' || state === 'reconnecting') && <View className="flex-1 items-center justify-center">
                 <ConnectingLoader state={state} />
             </View> }
-            { state === 'connected' && <View className="flex-1 py-16 px-6 gap-4">
-                <ConfigButton name="Device" onPress={navigateDeviceConfig} >
-                    <MonitorCog color={colors.foreground} size={16} />
-                </ConfigButton>
-                <ConfigButton name="Wi-Fi" onPress={navigateWifiConfig} >
-                    <WifiCog color={colors.foreground} size={16} />
-                </ConfigButton>
-                <ConfigButton name="API" onPress={navigateAPIConfig} >
-                    <ServerCog color={colors.foreground} size={16} />
-                </ConfigButton>
+            { state === 'connected' && <View className="flex-1 px-6 gap-8">
+                <View className="flex flex-row flex-wrap w-full gap-6">
+                    <StatusBox name="Wi-Fi" status={"Connected"} icon={Wifi} />
+                    <StatusBox name="Bluetooth" status={"Connected"} icon={Bluetooth} />
+                    <StatusBox name="Battery" status={"100%"} icon={Battery} />
+                </View>
+                <View className="flex-1 gap-4">
+                    <ConfigButton name="Device" onPress={navigateDeviceConfig} >
+                        <MonitorCog color={colors.foreground} size={16} />
+                    </ConfigButton>
+                    <ConfigButton name="Wi-Fi Settings" onPress={navigateWifiConfig} >
+                        <WifiCog color={colors.foreground} size={16} />
+                    </ConfigButton>
+                    <ConfigButton name="API Configuration" onPress={navigateAPIConfig} >
+                        <ServerCog color={colors.foreground} size={16} />
+                    </ConfigButton>
+                </View>
             </View> }
         </SafeAreaView>
     );
+}
+
+function StatusBox({ name, status, icon, children, ...rest }: {
+    name: string;
+    status: string;
+    icon: LucideIcon;
+} & PropsWithChildren<PressableProps>){
+    const Icon = icon;
+    return <AnimatedPressable {...rest} className="flex min-w-28 max-w-40 flex-grow">
+        <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
+            <Icon size={16} color={colors.foreground} />
+            <View className="flex gap-1">
+                <Text className="text-foreground">{ name }</Text>
+                <Text className="text-foreground/80 text-sm">{ status }</Text>
+            </View>
+            { children }
+        </View>
+    </AnimatedPressable>
 }
 
 function ConfigButton({ name, onPress, children }: {
     name: string,
     onPress: () => any
 } & PropsWithChildren){
-    const pressAnim = useRef(new Animated.Value(1)).current;
-
-    const handlePressIn = () => {
-        Animated.timing(pressAnim, {
-            toValue: 0.85, // zatamnjenje
-            duration: 100,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const handlePressOut = () => {
-        Animated.timing(pressAnim, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    return <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress}>
-        <Animated.View style={{ opacity: pressAnim }} className="flex flex-row items-center justify-between p-4 bg-background-alt rounded-lg">
+    return <AnimatedPressable onPress={onPress}>
+        <View className="flex flex-row items-center justify-between p-4 bg-background-alt rounded-xl">
             <View className="flex flex-row items-center gap-3">
                 { children }
                 <Text className="text-foreground">{ name }</Text>
             </View>
             <ChevronRight color={colors.foreground} size={22} />
-        </Animated.View>
-    </Pressable>
+        </View>
+    </AnimatedPressable>
 }
 
 function ConnectingLoader({ state }: {

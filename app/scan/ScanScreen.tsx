@@ -7,6 +7,7 @@ import { BLEService, IStrippedDevice } from "services/ble.service";
 import { config } from "constants/config";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
+import { AnimatedPressable } from "components/AnimatedPressable";
 
 const bleService = BLEService.getInstance();
 
@@ -190,29 +191,12 @@ function RenderDevice({ item, handleConnect, disabled }:{
     handleConnect: () => any,
     disabled: boolean
 }) {
-    const pressAnim = useRef(new Animated.Value(1)).current;
-
-    const handlePressIn = () => {
-        Animated.timing(pressAnim, {
-            toValue: 0.85, // zatamnjenje
-            duration: 100,
-            useNativeDriver: true,
-        }).start();
-    };
-    const handlePressOut = () => {
-        Animated.timing(pressAnim, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-        }).start();
-    };
-
     return (
-        <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={handleConnect}>
-            <Animated.View style={{ opacity: pressAnim }} className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
+        <AnimatedPressable onPress={handleConnect}>
+            <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
                 <Text className="text-foreground text-base font-medium">{item.name}</Text>
                 <ChevronRight size={22} color={colors.foreground}/>
             </Animated.View>
-        </Pressable>
+        </AnimatedPressable>
     );
 }
