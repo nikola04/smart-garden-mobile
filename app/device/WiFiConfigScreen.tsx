@@ -1,14 +1,12 @@
 import Button from "components/Button";
 import { useNavigation } from "@react-navigation/native";
-import { config } from "constants/config";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
-import { BLEService } from "services/ble.service";
 import ConfigField from "components/ConfigButton";
-import { DeviceConfig } from "types/device";
+import { DeviceRepository } from "repositories/device.repository";
 
-const bleService = BLEService.getInstance();
+const deviceRepository = DeviceRepository.getInstance();
 
 export default function WiFiConfigScreen(){
     const [ssid, setSSID] = useState<string>("");
@@ -18,52 +16,37 @@ export default function WiFiConfigScreen(){
     
     const isCanceled = useRef(false);
     
-    const updateConfig = useCallback(async () => {
+    const handleSave = useCallback(async () => {
         if(loading) return;
-        try{
-            setLoading(true);
-            const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristicUUIDs.deviceConfigs;
-            const data = ({
-                wifi_ssid: ssid,
-                wifi_pswd: pswd
-            });
+        setLoading(true);
 
-            await bleService.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, JSON.stringify(data));
-            if(isCanceled.current) return;
-            Alert.alert('Wi-Fi Settings updated successfully.')
-            navigation.goBack();
-        }catch(err){
-            console.log(err)
-        }finally{
-            if(isCanceled.current) return;
-            setLoading(false);
-        }
-    }, [loading, navigation, pswd, ssid]);
-
-
-    const fetchConfig = async () => {
-        const serviceUUID = config.allowedServiceUUIDs[0];
-        const characteristicUUID = config.characteristicUUIDs.deviceConfigs;
-        const configResponse = await bleService.readCharacteristicForService(serviceUUID, characteristicUUID).then(response => {
-            if(response && typeof response === 'string') return JSON.parse(response) as DeviceConfig;
-            return null;
+        deviceRepository.updateData({
+            wifi_ssid: ssid,
+            wifi_password: pswd
         });
 
-        if(isCanceled.current)
-            return;
+        if(isCanceled.current) return;
 
-        setSSID(configResponse?.wifi_ssid ?? '');
         setLoading(false);
-    }
+        Alert.alert('Wi-Fi Settings updated successfully.')
+        navigation.goBack();
+    }, [loading, navigation, pswd, ssid]);
 
     useEffect(() => {
         isCanceled.current = false;
 
-        fetchConfig();
-        return () => {
-            isCanceled.current = true;
-        }
+        (async () => {
+            const data = await deviceRepository.getData();
+            setLoading(false);
+
+            if(isCanceled.current || !data?.device_name)
+                return;
+
+            setSSID(data.wifi_ssid);
+            setPswd(data.wifi_password);
+        })();
+        
+        return () => { isCanceled.current = true };
     }, [])
     
     return <KeyboardAvoidingView 
@@ -95,7 +78,7 @@ export default function WiFiConfigScreen(){
                 </View>
             </View>
             <View className="flex w-full">
-                <Button title="Save" loading={loading} onPress={updateConfig}/>
+                <Button title="Save" loading={loading} onPress={handleSave}/>
             </View>
         </View>
     </KeyboardAvoidingView>

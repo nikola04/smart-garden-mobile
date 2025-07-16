@@ -1,66 +1,52 @@
 import Button from "components/Button";
-import { config } from "constants/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
-import { BLEService } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import ConfigField from "components/ConfigButton";
-import { DeviceConfig } from "types/device";
+import { DeviceRepository } from "repositories/device.repository";
+import { useDeviceStore } from "hooks/useDeviceStore";
 
-const bleService = BLEService.getInstance();
+const deviceRepository = DeviceRepository.getInstance();
 
 export default function DeviceConfigScreen(){
-    const [name, setName] = useState<string>("");
-    const [loading, setLoading] = useState<boolean>(false);
+    const { data } = useDeviceStore();
+    const [name, setName] = useState<string>(data?.device_name ?? '');
+    const [loading, setLoading] = useState<boolean>(true);
     const navigation = useNavigation<RootNavigationProp>();
     
     const isCanceled = useRef(false);
 
-    const updateConfig = useCallback(async () => {
+    const handleSave = useCallback(async () => {
         if(loading) return;
-        try{
-            setLoading(true);
-            const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristicUUIDs.deviceConfigs;
-            const data = ({
-                device_name: name
-            });
+        setLoading(true);
 
-            await bleService.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, JSON.stringify(data));
-            if(isCanceled.current) return;
-            Alert.alert('Device name is updated successfully.')
-            navigation.goBack();
-        }catch(err){
-            console.log(err)
-        }finally{
-            if(isCanceled.current) return;
-            setLoading(false);
-        }
+        const success = await deviceRepository.updateData({
+            device_name: name
+        });
+        if(isCanceled.current) return;
+
+        if(success)
+            Alert.alert('Device updated successfully.')
+
+        navigation.goBack();
+        setLoading(false);
     }, [loading, name, navigation]);
-
-        const fetchConfig = async () => {
-            const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristicUUIDs.deviceConfigs;
-            const configResponse = await bleService.readCharacteristicForService(serviceUUID, characteristicUUID).then(response => {
-                if(response && typeof response === 'string') return JSON.parse(response) as DeviceConfig;
-                return null;
-            });
-    
-            if(isCanceled.current)
-                return;
-    
-            setName(configResponse?.device_name ?? '');
-            setLoading(false);
-        }
 
     useEffect(() => {
         isCanceled.current = false;
-        fetchConfig();
 
-        return () => {
-            isCanceled.current = true;
-        }
+        (async () => {
+            const data = await deviceRepository.getData();
+            setLoading(false);
+
+            if(isCanceled.current || !data?.device_name)
+                return;
+
+            setName(data.device_name);
+        })();
+        
+        return () => { isCanceled.current = true };
     }, []);
 
     return <KeyboardAvoidingView 
@@ -84,7 +70,7 @@ export default function DeviceConfigScreen(){
                 </View>
             </View>
             <View className="flex w-full">
-                <Button title="Save" loading={loading} onPress={updateConfig}/>
+                <Button title="Save" loading={loading} onPress={handleSave} />
             </View>
         </View>
     </KeyboardAvoidingView>

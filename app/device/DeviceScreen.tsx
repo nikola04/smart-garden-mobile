@@ -1,8 +1,8 @@
 import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, PressableProps, SafeAreaView, Text, View } from "react-native";
+import { Animated, Easing, PressableProps, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { Battery, Bluetooth, BluetoothSearching, ChevronRight, LucideIcon, MonitorCog, ServerCog, Wifi, WifiCog } from "lucide-react-native";
+import { Battery, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
@@ -76,22 +76,31 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
             { (state === 'connecting' || state === 'reconnecting') && <View className="flex-1 items-center justify-center">
                 <ConnectingLoader state={state} />
             </View> }
-            { state === 'connected' && <View className="flex-1 px-6 gap-8">
-                <View className="flex flex-row flex-wrap w-full gap-6">
-                    <StatusBox name="Wi-Fi" status={"Connected"} icon={Wifi} />
-                    <StatusBox name="Bluetooth" status={"Connected"} icon={Bluetooth} />
-                    <StatusBox name="Battery" status={"100%"} icon={Battery} />
-                </View>
-                <View className="flex-1 gap-4">
-                    <ConfigButton name="Device" onPress={navigateDeviceConfig} >
-                        <MonitorCog color={colors.foreground} size={16} />
-                    </ConfigButton>
-                    <ConfigButton name="Wi-Fi Settings" onPress={navigateWifiConfig} >
-                        <WifiCog color={colors.foreground} size={16} />
-                    </ConfigButton>
-                    <ConfigButton name="API Configuration" onPress={navigateAPIConfig} >
-                        <ServerCog color={colors.foreground} size={16} />
-                    </ConfigButton>
+            { state === 'connected' && <View className="flex-1 gap-8">
+                <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} className="flex-none w-full h-fit gap-6">
+                    <View className="flex flex-row px-6 py-3 gap-4">
+                        <StatusBox name="Wi-Fi" status={"Connected"} icon={Wifi} />
+                        <StatusBox name="Battery" status={"100%"} icon={Battery} />
+                        <StatusBox name="Temperature" status={"28 °C"} icon={ThermometerSun} />
+                        <StatusBox name="Humidity" status={"58%"} icon={Waves} />
+                        <StatusBox name="Soil Moisture" status={"66%"} icon={Droplets} />
+                    </View>
+                </ScrollView>
+                <View className="flex-1 gap-4 px-6">
+                    <Text className="text-foreground text-lg font-bold">Settings</Text>
+                    {/* <ScrollView> */}
+                        <View className="flex gap-4">
+                            <ConfigButton name="Device" onPress={navigateDeviceConfig} >
+                                <MonitorCog color={colors.foreground} size={16} />
+                            </ConfigButton>
+                            <ConfigButton name="Wi-Fi Settings" onPress={navigateWifiConfig} >
+                                <WifiCog color={colors.foreground} size={16} />
+                            </ConfigButton>
+                            <ConfigButton name="API Configuration" onPress={navigateAPIConfig} >
+                                <ServerCog color={colors.foreground} size={16} />
+                            </ConfigButton>
+                        </View>
+                    {/* </ScrollView> */}
                 </View>
             </View> }
         </SafeAreaView>
@@ -104,7 +113,7 @@ function StatusBox({ name, status, icon, children, ...rest }: {
     icon: LucideIcon;
 } & PropsWithChildren<PressableProps>){
     const Icon = icon;
-    return <AnimatedPressable {...rest} className="flex min-w-28 max-w-40 flex-grow">
+    return <AnimatedPressable {...rest} className="flex w-32">
         <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
             <Icon size={16} color={colors.foreground} />
             <View className="flex gap-1">
