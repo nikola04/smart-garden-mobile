@@ -1,9 +1,10 @@
 const allowedServiceUUIDs = [
-    '4fafc201-1fb5-459e-8fcc-c5c9c331914b'
+    '5C885D90-2726-4368-A12D-342D26C1C99A'
 ];
 
 const characteristicUUIDs = {
-    deviceConfigs: 'beb5483e-36e1-4688-b7f5-ea07361b26a8',
+    device: '57C1288C-B1A8-44BC-AABD-1D94F987BE97',
+    sensors: '78B32B3B-DA18-43BB-B56D-4773BA5DDBD1'
 }
 
 const bleReconnect = {

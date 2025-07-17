@@ -7,8 +7,12 @@ import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.servi
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
 import { AnimatedPressable } from "components/AnimatedPressable";
+import { useSensorStore } from "hooks/useSensorsStore";
+import { SensorsRepository } from "repositories/sensors.repository";
+import ViewSkeleton from "components/ViewSkeleton";
 
 const bleService = BLEService.getInstance();
+const sensorsRepository = SensorsRepository.getInstance();
 
 const getStateColor = (state: ConnectionState) => {
     switch (state) {
@@ -25,9 +29,21 @@ const getStateColor = (state: ConnectionState) => {
 export default function DeviceScreen({ route }: StaticScreenProps<{
     device: IStrippedDevice
 }>) {
+    const { data } = useSensorStore();
+    const [loading, setLoading] = useState<boolean>(true);
     const [state, setState] = useState<ConnectionState>('disconnected');
     const navigation = useNavigation<RootNavigationProp>();
     const params = route.params;
+
+    const sensors = useMemo(() => ({
+        wifi: data?.wifi ?? '',
+        battery: data?.battery ? data.battery + '%' : '',
+        charger: data?.charger ?? '',
+        air_temp: data?.air_temp ? data.air_temp + ' °C' : '',
+        air_hum: data?.air_hum ? data.air_hum + '%' : '',
+        soil: data?.soil ? data.soil + '%' : '',
+        light: data?.light === 'true' ? true : false
+    }), [data]);
 
     const dynamicText = useMemo(() => {
         if(state === 'connecting') return 'Connecting...';
@@ -36,13 +52,26 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         if(state === 'connected') return 'Connected';
     }, [state]);
 
+
+    useEffect(() => {
+        if(state !== 'connected')
+            return;
+
+        (async () => {
+            await sensorsRepository.getData();
+            setLoading(false);
+        })();
+
+        return () => setLoading(true);
+    }, [state]);
+
     useEffect(() => {
         const stateHandler = (state: ConnectionState) => {
             setState(state)
         }
         bleService.addConnectionStateListener(stateHandler);
 
-        const connect = async () => {
+        (async () => {
             try {
                 const connectedDevice = await bleService.connectToDevice(params.device.id) ?? null;
                 if(!connectedDevice){
@@ -53,9 +82,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
                 console.warn('error connecting to device...', err);
                 return;
             }
-        }
-
-        connect();
+        })();
 
         return () => {
             bleService.removeConnectionStateListener(stateHandler);
@@ -79,12 +106,15 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
             { state === 'connected' && <View className="flex-1 gap-8">
                 <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} className="flex-none w-full h-fit gap-6">
                     <View className="flex flex-row px-6 py-3 gap-4">
-                        <StatusBox name="Wi-Fi" status={"Connected"} icon={Wifi} />
-                        <StatusBox name="Battery" status={"100%"} icon={Battery} />
-                        <StatusBox name="Temperature" status={"28 °C"} icon={ThermometerSun} />
-                        <StatusBox name="Humidity" status={"58%"} icon={Waves} />
-                        <StatusBox name="Soil Moisture" status={"66%"} icon={Droplets} />
-                    </View>
+                    {   !loading ? <> 
+                        <StatusBox name="Wi-Fi" status={sensors.wifi} icon={Wifi} />
+                        <StatusBox name="Battery" status={sensors.battery} icon={Battery} />
+                        <StatusBox name="Temperature" status={sensors.air_temp} icon={ThermometerSun} />
+                        <StatusBox name="Humidity" status={sensors.air_hum} icon={Waves} />
+                        <StatusBox name="Soil Moisture" status={sensors.soil} icon={Droplets} />
+                        </> : new Array(5).fill(null).map((_, i) => <StatusBoxSkeleton key={i} />)
+                    }
+                    </View> 
                 </ScrollView>
                 <View className="flex-1 gap-4 px-6">
                     <Text className="text-foreground text-lg font-bold">Settings</Text>
@@ -123,6 +153,18 @@ function StatusBox({ name, status, icon, children, ...rest }: {
             { children }
         </View>
     </AnimatedPressable>
+}
+
+function StatusBoxSkeleton(){
+    return <View className="flex w-32">
+        <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
+            <ViewSkeleton className="w-6 h-6 bg-background rounded-lg"/>
+            <View className="flex gap-2.5">
+                <ViewSkeleton className="flex w-3/4 h-4 bg-background rounded-full" />
+                <ViewSkeleton className="flex w-full h-3 bg-background rounded-full" />
+            </View>
+        </View>
+    </View>
 }
 
 function ConfigButton({ name, onPress, children }: {
