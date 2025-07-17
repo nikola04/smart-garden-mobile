@@ -37,11 +37,11 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
 
     const sensors = useMemo(() => ({
         wifi: data?.wifi ?? '',
-        battery: data?.battery ? data.battery + '%' : '',
+        battery: data?.battery ? Number.parseInt(data.battery) + '%' : '',
         charger: data?.charger ?? '',
-        air_temp: data?.air_temp ? data.air_temp + ' °C' : '',
-        air_hum: data?.air_hum ? data.air_hum + '%' : '',
-        soil: data?.soil ? data.soil + '%' : '',
+        air_temp: data?.air_temp ? Number(data.air_temp).toFixed(1) + ' °C' : '',
+        air_hum: data?.air_hum ? Number.parseInt(data.air_hum) + '%' : '',
+        soil: data?.soil ? Number(data.soil).toFixed(1) + '%' : '',
         light: data?.light === 'true' ? true : false
     }), [data]);
 
@@ -52,15 +52,11 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         if(state === 'connected') return 'Connected';
     }, [state]);
 
-
     useEffect(() => {
         if(state !== 'connected')
             return;
 
-        (async () => {
-            await sensorsRepository.getData();
-            setLoading(false);
-        })();
+        sensorsRepository.getData().then(() => setLoading(false));
         const subscription = sensorsRepository.startLiveListening();
 
         return () => {
@@ -72,19 +68,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     useEffect(() => {
         const stateHandler = (state: ConnectionState) => setState(state);
         bleService.addConnectionStateListener(stateHandler);
-
-        (async () => {
-            try {
-                const connectedDevice = await bleService.connectToDevice(params.device.id) ?? null;
-                if(!connectedDevice){
-                    console.warn('device null...');
-                    return;
-                }
-            }catch(err){
-                console.warn('error connecting to device...', err);
-                return;
-            }
-        })();
+        bleService.connectToDevice(params.device.id)
 
         return () => {
             bleService.removeConnectionStateListener(stateHandler);
@@ -144,13 +128,33 @@ function StatusBox({ name, status, icon, children, ...rest }: {
     status: string;
     icon: LucideIcon;
 } & PropsWithChildren<PressableProps>){
+    const opacity = useRef(new Animated.Value(0.7)).current;
     const Icon = icon;
+
+    useEffect(() => {
+        Animated.sequence([
+            Animated.timing(opacity, {
+                toValue: 1,
+                duration: 250,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.delay(300),
+            Animated.timing(opacity, {
+                toValue: 0.7,
+                duration: 500,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [opacity, status]);
+
     return <AnimatedPressable {...rest} className="flex w-32">
         <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
             <Icon size={16} color={colors.foreground} />
             <View className="flex gap-1">
                 <Text className="text-foreground capitalize">{ name }</Text>
-                <Text className="text-foreground/80 text-sm capitalize">{ status }</Text>
+                <Animated.Text style={{ opacity }} className="text-foreground text-sm capitalize">{ status }</Animated.Text>
             </View>
             { children }
         </View>

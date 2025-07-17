@@ -114,8 +114,13 @@ export class BLEService {
             this.lastConnectedDeviceId = this.connectedDevice?.id ?? null;
             this.connecting = false;
             return this.connectedDevice;
-        } catch (error) {
-            console.warn('[ble.service.ts]connectToDevice:', error); // if this one occures, can be due to cancellation in parallel connection
+        } catch (err) {
+            if(err instanceof BleError){
+                if(err.errorCode === BleErrorCode.DeviceDisconnected
+                    || err.errorCode === BleErrorCode.OperationCancelled) // silently handle - probably trying to connect in parallel and one being cancelled
+                    return null;
+            }
+            console.warn('[ble.service.ts]connectToDevice:', err);
             this.notifyStateChange('disconnected')
             this.connecting = false;
             return null;
@@ -130,7 +135,11 @@ export class BLEService {
             const device = this.connectedDevice;
             if(this.disconnectSubscription) this.disconnectSubscription.remove(); // remove it before it disconnects so attemptReconnect wont be called on manually disconnected device
             this.disconnecting = this.manager.cancelDeviceConnection(device.id).catch((err) => {
-                console.warn('[ble.service.ts]disconnectFromDevice catched:', err); // can be canceled if error occures
+                if(err instanceof BleError){
+                    if(err.errorCode === BleErrorCode.OperationCancelled) // silently handle
+                        return;
+                }
+                console.warn('[ble.service.ts]disconnectFromDevice catched:', err);
             }).finally(() => {
                 this.connectedDevice = null;
                 this.disconnecting = null;
@@ -194,9 +203,11 @@ export class BLEService {
         }
 
         return this.connectedDevice.monitorCharacteristicForService(serviceUUID, characteristicUUID, (error, characteristic) => {
-            if (error) {
+            if (error) {                
                 if(error.errorCode === BleErrorCode.OperationCancelled // silently handle
-                    || error.errorCode === BleErrorCode.DeviceDisconnected) return; // should be handled in onDisconnect
+                    || error.errorCode === BleErrorCode.DeviceDisconnected // should be handled in onDisconnect
+                    || error.errorCode === BleErrorCode.DeviceNotConnected) 
+                    return;
 
                 console.error('[ble.service.ts]monitorCharacteristic:', error);
                 return;
@@ -225,7 +236,9 @@ export class BLEService {
         } catch (err) {
             if(err instanceof BleError){
                 if(err.errorCode === BleErrorCode.OperationCancelled // silently handle
-                    || err.errorCode === BleErrorCode.DeviceDisconnected) return null; // should be handled in onDisconnect
+                    || err.errorCode === BleErrorCode.DeviceDisconnected // should be handled in onDisconnect
+                    || err.errorCode === BleErrorCode.DeviceNotConnected) 
+                    return null;
             }
             
             console.error('[ble.service.ts]readCharacteristicForService:', err);
