@@ -36,7 +36,7 @@ export class DeviceRepository {
     }
 
     private async fetchData(): Promise<boolean> {
-        const deviceResponse = await this.bleService.readCharacteristicForService(this.serviceUUID, this.characteristicUUID).then(response => {
+        const deviceResponse = await this.bleService.readCharacteristic(this.serviceUUID, this.characteristicUUID).then(response => {
             if(response && typeof response === 'string') return JSON.parse(response) as DeviceConfig;
             return null;
         });
@@ -64,16 +64,12 @@ export class DeviceRepository {
     }
 
     public async updateData(data: Partial<DeviceConfig>): Promise<boolean> {
-        const response = await this.bleService.writeCharacteristicWithResponseForService(this.serviceUUID, this.characteristicUUID, JSON.stringify(data));
+        const response = await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, JSON.stringify(data));
         if(response) {
             this.setData(data);
             return true;
         }
 
         return false;
-    }
-
-    public handleLiveDataUpdate(data: DeviceConfig): void {
-        this.setData(data);
     }
 }

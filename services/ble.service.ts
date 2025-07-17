@@ -1,5 +1,5 @@
 import { Alert, PermissionsAndroid, Platform } from "react-native";
-import { BleError, BleManager, Device, Subscription } from "react-native-ble-plx";
+import { BleError, BleErrorCode, BleManager, Device, Subscription } from "react-native-ble-plx";
 import { Buffer } from 'buffer';
 
 export interface IStrippedDevice {
@@ -102,6 +102,7 @@ export class BLEService {
 
             if(this.connectedDevice) { // if device connected successfully
                 await this.connectedDevice.discoverAllServicesAndCharacteristics();
+
                 this.notifyStateChange('connected');
 
                 if(this.disconnectSubscription) this.disconnectSubscription.remove(); // remove old and add new subscription
@@ -186,13 +187,35 @@ export class BLEService {
         this.listeners.forEach(listener => listener(state));
     }
 
-    public async readCharacteristicForService(serviceUUID: string, characteristicUUID: string): Promise<string | null> {
+    public monitorCharacteristic(serviceUUID: string, characteristicUUID: string, onData: (data: string) => void) {
+        if (!this.connectedDevice) {
+            console.error('No connected device to monitor from.');
+            return null;
+        }
+
+        return this.connectedDevice.monitorCharacteristicForService(serviceUUID, characteristicUUID, (error, characteristic) => {
+            if (error) {
+                if(error.errorCode === BleErrorCode.OperationCancelled // silently handle
+                    || error.errorCode === BleErrorCode.DeviceDisconnected) return; // should be handled in onDisconnect
+
+                console.error('[ble.service.ts]monitorCharacteristic:', error);
+                return;
+            }
+            if (!characteristic?.value) return;
+
+            const decoded = Buffer.from(characteristic.value, 'base64').toString('utf-8');
+            onData(decoded);
+        });
+    }
+
+
+    public async readCharacteristic(serviceUUID: string, characteristicUUID: string): Promise<string | null> {
         if (!this.connectedDevice) {
             console.error('No connected device to read from.');
             return null;
         }
         try {
-            const characteristic = await this.connectedDevice?.readCharacteristicForService(serviceUUID, characteristicUUID);
+            const characteristic = await this.connectedDevice.readCharacteristicForService(serviceUUID, characteristicUUID);
 
             const base64Value = characteristic?.value;
             if (!base64Value) return null;
@@ -200,19 +223,24 @@ export class BLEService {
             const response = Buffer.from(base64Value, 'base64').toString('utf-8');
             return response ?? null;
         } catch (err) {
+            if(err instanceof BleError){
+                if(err.errorCode === BleErrorCode.OperationCancelled // silently handle
+                    || err.errorCode === BleErrorCode.DeviceDisconnected) return null; // should be handled in onDisconnect
+            }
+            
             console.error('[ble.service.ts]readCharacteristicForService:', err);
             return null;
         }
     }
 
-    public async writeCharacteristicWithResponseForService(serviceUUID: string, characteristicUUID: string, value: string): Promise<string | null> {
+    public async writeCharacteristicWithResponse(serviceUUID: string, characteristicUUID: string, value: string): Promise<string | null> {
         if(!this.connectedDevice) {
             console.error('No connected device to write to.');
             return null;
         }
         try {
             const base64Request = Buffer.from(value, 'utf-8').toString('base64');
-            const characteristic = await this.connectedDevice?.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, base64Request);
+            const characteristic = await this.connectedDevice.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, base64Request);
 
             if (!characteristic?.value) return null;
 

@@ -61,14 +61,16 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
             await sensorsRepository.getData();
             setLoading(false);
         })();
+        const subscription = sensorsRepository.startLiveListening();
 
-        return () => setLoading(true);
+        return () => {
+            subscription?.remove();
+            setLoading(true);
+        }
     }, [state]);
 
     useEffect(() => {
-        const stateHandler = (state: ConnectionState) => {
-            setState(state)
-        }
+        const stateHandler = (state: ConnectionState) => setState(state);
         bleService.addConnectionStateListener(stateHandler);
 
         (async () => {
@@ -147,8 +149,8 @@ function StatusBox({ name, status, icon, children, ...rest }: {
         <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
             <Icon size={16} color={colors.foreground} />
             <View className="flex gap-1">
-                <Text className="text-foreground">{ name }</Text>
-                <Text className="text-foreground/80 text-sm">{ status }</Text>
+                <Text className="text-foreground capitalize">{ name }</Text>
+                <Text className="text-foreground/80 text-sm capitalize">{ status }</Text>
             </View>
             { children }
         </View>

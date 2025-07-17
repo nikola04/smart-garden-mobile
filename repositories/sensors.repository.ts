@@ -1,5 +1,6 @@
 import { config } from "constants/config";
 import { useSensorStore } from "hooks/useSensorsStore";
+import { Subscription } from "react-native-ble-plx";
 import { BLEService } from "services/ble.service";
 import { SensorData } from "types/sensors";
 
@@ -10,6 +11,7 @@ export class SensorsRepository {
     private bleService: BLEService;
     private serviceUUID: string;
     private characteristicUUID: string;
+    private currentLiveSubscription: Subscription | null = null;
 
     constructor() {
         this.bleService = BLEService.getInstance();
@@ -23,12 +25,16 @@ export class SensorsRepository {
         return this.instance;
     }
 
-    private setData(data: SensorData): void {
-        useSensorStore.getState().setData(data);
+    private setData(data: Partial<SensorData>): void {
+        const { data: old, setData } = useSensorStore.getState();
+        setData({ 
+            ...old,
+            ...data
+        });
     }
 
     private async fetchData(): Promise<boolean> {
-        const sensorsResponse = await this.bleService.readCharacteristicForService(this.serviceUUID, this.characteristicUUID).then(response => {
+        const sensorsResponse = await this.bleService.readCharacteristic(this.serviceUUID, this.characteristicUUID).then(response => {
             if(response && typeof response === 'string') return JSON.parse(response) as SensorData;
             return null;
         });
@@ -55,7 +61,14 @@ export class SensorsRepository {
         return useSensorStore.getState().data;
     }
 
-    public handleLiveDataUpdate(data: SensorData): void {
-        this.setData(data);
+    private handleLiveDataUpdate(data: string): void {
+        const json = JSON.parse(data) as Partial<SensorData>;
+        this.setData(json);
+    }
+
+    public startLiveListening(): Subscription|null {
+        this.currentLiveSubscription?.remove();
+        this.currentLiveSubscription = BLEService.getInstance().monitorCharacteristic(this.serviceUUID, this.characteristicUUID, this.handleLiveDataUpdate.bind(this));
+        return this.currentLiveSubscription;
     }
 }
