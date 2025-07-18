@@ -65,8 +65,6 @@ export class DeviceRepository {
     }
 
     public async updateData(data: Partial<DeviceConfig>): Promise<boolean> {
-        console.log(data)
-        console.log(JSON.stringify(data))
         const response = await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, JSON.stringify(data));
         if(response) {
             this.setData(data);
