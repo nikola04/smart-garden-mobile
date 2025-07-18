@@ -1,20 +1,22 @@
 import Button from "components/Button";
-import { useNavigation } from "@react-navigation/native";
-import { RootNavigationProp } from "navigation/RootNavigation";
+import { RootStackParamList } from "navigation/RootNavigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import ConfigField from "components/ConfigField";
 import { DeviceRepository } from "repositories/device.repository";
 import { WifiCog } from "lucide-react-native";
-import colors from "constants/colors";
+import { StackScreenProps } from "@react-navigation/stack";
+import { AnimatedPressable } from "components/AnimatedPressable";
+import useTheme from "hooks/useTheme";
 
 const deviceRepository = DeviceRepository.getInstance();
 
-export default function WiFiConfigScreen(){
-    const [ssid, setSSID] = useState<string>("");
+type WiFiConfigScreenProps = StackScreenProps<RootStackParamList, 'WiFi Configuration'>;
+export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreenProps){
+    const [ssid, setSSID] = useState<string>();
     const [pswd, setPswd] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(true);
-    const navigation = useNavigation<RootNavigationProp>();
+    const theme = useTheme();
     
     const isCanceled = useRef(false);
     
@@ -52,7 +54,8 @@ export default function WiFiConfigScreen(){
     }, [])
     
     return <KeyboardAvoidingView 
-        className="flex-1 bg-background"
+        className="flex-1"
+        style={{ backgroundColor: theme.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0}
     >
@@ -60,27 +63,32 @@ export default function WiFiConfigScreen(){
             <View className="flex-1 w-full gap-12">
                 <View>
                     <View className="flex flex-row items-center gap-2">
-                        <WifiCog color={colors.foreground} size={16} />
-                        <Text className="font-bold text-foreground text-lg">Configure Wi-Fi</Text>
+                        <WifiCog color={theme.foreground} size={16} />
+                        <Text className="font-bold text-lg" style={{ color: theme.foreground }}>Configure Wi-Fi</Text>
                     </View>
-                    <Text className="text-foreground/40 text-sm">Set wifi ssid and password.</Text>
+                    <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .4) }}>Set wifi ssid and password.</Text>
                 </View>
                 <View className="gap-8">
                     <ConfigField
                         title="SSID"
                         placeholder="Name..."
                         value={ssid}
-                        setValue={setSSID}
+                        onChangeText={setSSID}
                     />
                     <ConfigField
                         title="Password"
                         desc="Old password won&apos;t be shown here!"
                         placeholder="Password..."
                         value={pswd}
-                        setValue={setPswd}
-                        secureEntry={true}
+                        onChangeText={setPswd}
+                        secureTextEntry={true}
                     />
                 </View>
+                <AnimatedPressable>
+                    <View className="flex items-center justify-center p-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
+                        <Text className="text-center" style={{ color: theme.rgba(theme.foreground, .8) }}>Scan Networks</Text>
+                    </View>
+                </AnimatedPressable>
             </View>
             <View className="flex w-full">
                 <Button title="Save" loading={loading} onPress={handleSave}/>

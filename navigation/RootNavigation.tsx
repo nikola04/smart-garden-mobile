@@ -1,15 +1,15 @@
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import ScanScreen from 'app/scan/ScanScreen';
-import { IStrippedDevice } from 'services/ble.service';
 import DeviceScreen from 'app/device/DeviceScreen';
-import WiFiConfigScreen from 'app/device/WiFiConfigScreen';
 import APIConfigScreen from 'app/device/APIConfigScreen';
-import colors from 'constants/colors';
 import DeviceConfigScreen from 'app/device/DeviceConfigScreen';
+import { Device } from 'react-native-ble-plx';
+import WiFiConfigScreen from 'app/device/WiFiConfigScreen';
+import useTheme from 'hooks/useTheme';
 
 export type RootStackParamList = {
     Pairing: undefined,
-    Device: { device: IStrippedDevice };
+    Device: { device: Device };
     'WiFi Configuration': undefined,
     'Device Configuration': undefined,
     'API Configuration': undefined,
@@ -20,16 +20,17 @@ export type RootNavigationProp = StackNavigationProp<RootStackParamList, 'Pairin
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function RootNavigation() {
+    const theme = useTheme();
     return (
         <Stack.Navigator screenOptions={{
             headerStyle: {
-                backgroundColor: colors.background, // Background color of the header
+                backgroundColor: theme.background, // Background color of the header
                 height: 100,
                 elevation: 0,
                 shadowOpacity: 0,
                 borderBottomWidth: 0, // No border at the bottom of the header
             },
-            headerTintColor: colors.foreground, // Color of the back button and title
+            headerTintColor: theme.foreground, // Color of the back button and title
             headerTitleStyle: {
                 textTransform: 'uppercase',
                 fontWeight: '500', // Style for the header title text

@@ -7,7 +7,7 @@ import { BLEService } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import ConfigField from "components/ConfigField";
 import { ServerCog } from "lucide-react-native";
-import colors from "constants/colors";
+import useTheme from "hooks/useTheme";
 
 const bleService = BLEService.getInstance();
 
@@ -15,6 +15,7 @@ export default function APIConfigScreen(){
     const [key, setKey] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const navigation = useNavigation<RootNavigationProp>();
+    const theme = useTheme();
     
     const isCanceled = useRef(false);
 
@@ -48,7 +49,8 @@ export default function APIConfigScreen(){
     }, []);
 
     return <KeyboardAvoidingView 
-        className="flex-1 bg-background"
+        className="flex-1"
+        style={{ backgroundColor: theme.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0}
     >
@@ -56,10 +58,10 @@ export default function APIConfigScreen(){
             <View className="flex-1 w-full gap-12">
                 <View>
                     <View className="flex flex-row items-center gap-2">
-                        <ServerCog color={colors.foreground} size={16} />
-                        <Text className="font-bold text-foreground text-lg">Configure API</Text>
+                        <ServerCog color={theme.foreground} size={16} />
+                        <Text className="font-bold text-lg" style={{ color: theme.foreground }}>Configure API</Text>
                     </View>
-                    <Text className="text-foreground/40 text-sm">Set key generated in project settings.</Text>
+                    <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .4) }}>Set key generated in project settings.</Text>
                 </View>
                 <View className="gap-8">
                     <ConfigField
@@ -67,8 +69,8 @@ export default function APIConfigScreen(){
                         desc="Old key won&apos;t be shown here!"
                         placeholder="xxxxxxxxxxxxxxxxxxxxxxxxx..."
                         value={key}
-                        setValue={setKey}
-                        secureEntry={true}
+                        onChangeText={setKey}
+                        secureTextEntry={true}
                     />
                 </View>
             </View>

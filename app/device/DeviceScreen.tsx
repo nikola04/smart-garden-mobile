@@ -5,18 +5,18 @@ import Loader from "components/Loader";
 import { Battery, BluetoothConnected, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
-import colors from "constants/colors";
 import { AnimatedPressable } from "components/AnimatedPressable";
 import { useSensorStore } from "hooks/useSensorsStore";
 import { SensorsRepository } from "repositories/sensors.repository";
 import ViewSkeleton from "components/ViewSkeleton";
 import * as Haptics from 'expo-haptics';
 import { Device } from "react-native-ble-plx";
+import useTheme from "hooks/useTheme";
 
 const bleService = BLEService.getInstance();
 const sensorsRepository = SensorsRepository.getInstance();
 
-const getStateColor = (state: ConnectionState) => {
+const getStateColor = (state: ConnectionState, primary: string) => {
     switch (state) {
         case 'connecting':
         case 'reconnecting':
@@ -24,7 +24,7 @@ const getStateColor = (state: ConnectionState) => {
         case 'disconnected':
             return '#EF4444';
         default:
-            return colors.primary;
+            return primary;
     }
 }
 
@@ -37,6 +37,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     const [loading, setLoading] = useState<boolean>(true);
     const [state, setState] = useState<ConnectionState>('disconnected');
     const navigation = useNavigation<RootNavigationProp>();
+    const theme = useTheme();
     const params = route.params;
 
     const sensors = useMemo(() => ({
@@ -111,13 +112,13 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     const navigateAPIConfig = () => navigation.navigate('API Configuration');
      
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="relative flex gap-2 py-8">
-                <Text className="font-bold text-base text-center text-foreground">{ params.device.name }</Text>
-                <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>
+                <Text className="font-bold text-base text-center" style={{ color: theme.foreground }}>{ params.device.name }</Text>
+                <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state, theme.primary) }}>{ dynamicText }</Text>
                 { state === 'connected' && <AnimatedPressable className="absolute right-6 top-9" onLongPress={handlePowerLongPress}>
-                    <View className="bg-background-alt p-3 rounded-full">
-                        <Power color={colors.foreground} size={18} style={{ marginTop: -1 }} />
+                    <View className="p-3 rounded-full" style={{ backgroundColor: theme.backgroundAlt }}>
+                        <Power color={theme.foreground} size={18} style={{ marginTop: -1 }} />
                     </View>
                 </AnimatedPressable> }
             </View>
@@ -139,17 +140,17 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
                     </View> 
                 </ScrollView>
                 <View className="flex-1 gap-4 px-6">
-                    <Text className="text-foreground text-lg font-bold">Settings</Text>
+                    <Text className="text-lg font-bold" style={{ color: theme.foreground }}>Settings</Text>
                     {/* <ScrollView> */}
                         <View className="flex gap-4">
                             <ConfigButton name="Device" onPress={navigateDeviceConfig} >
-                                <MonitorCog color={colors.foreground} size={16} />
+                                <MonitorCog color={theme.foreground} size={16} />
                             </ConfigButton>
                             <ConfigButton name="Wi-Fi Settings" onPress={navigateWifiConfig} >
-                                <WifiCog color={colors.foreground} size={16} />
+                                <WifiCog color={theme.foreground} size={16} />
                             </ConfigButton>
                             <ConfigButton name="API Configuration" onPress={navigateAPIConfig} >
-                                <ServerCog color={colors.foreground} size={16} />
+                                <ServerCog color={theme.foreground} size={16} />
                             </ConfigButton>
                         </View>
                     {/* </ScrollView> */}
@@ -165,6 +166,7 @@ function StatusBox({ name, status, icon, capitalize = false, children, ...rest }
     icon: LucideIcon;
     capitalize?: boolean;
 } & PropsWithChildren<PressableProps>){
+    const theme = useTheme();
     const opacity = useRef(new Animated.Value(0.7)).current;
     const Icon = icon;
 
@@ -187,11 +189,11 @@ function StatusBox({ name, status, icon, capitalize = false, children, ...rest }
     }, [opacity, status]);
 
     return <AnimatedPressable {...rest} className="flex w-32">
-        <View className="flex p-4 gap-4 bg-background-alt rounded-3xl">
-            <Icon size={16} color={colors.foreground} />
+        <View className="flex p-4 gap-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
+            <Icon size={16} color={theme.foreground} />
             <View className="flex gap-1">
-                <Text className="text-foreground capitalize">{ name }</Text>
-                <Animated.Text style={{ opacity }} className={`text-foreground text-sm ${capitalize ? 'capitalize' : ''}`}>{ status }</Animated.Text>
+                <Text className="capitalize" style={{ color: theme.foreground }}>{ name }</Text>
+                <Animated.Text style={{ opacity, color: theme.foreground }} className={`text-sm ${capitalize ? 'capitalize' : ''}`}>{ status }</Animated.Text>
             </View>
             { children }
         </View>
@@ -199,12 +201,13 @@ function StatusBox({ name, status, icon, capitalize = false, children, ...rest }
 }
 
 function StatusBoxSkeleton(){
+    const theme = useTheme();
     return <View className="flex w-32">
-        <View className="flex p-4 gap-4 bg-background-alt rounded-3xl">
-            <ViewSkeleton className="w-6 h-6 bg-background rounded-lg"/>
+        <View className="flex p-4 gap-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
+            <ViewSkeleton className="w-6 h-6 rounded-lg" style={{ backgroundColor: theme.background }}/>
             <View className="flex gap-2.5">
-                <ViewSkeleton className="flex w-3/4 h-4 bg-background rounded-full" />
-                <ViewSkeleton className="flex w-full h-3 bg-background rounded-full" />
+                <ViewSkeleton className="flex w-3/4 h-4 rounded-full" style={{ backgroundColor: theme.background }} />
+                <ViewSkeleton className="flex w-full h-3 rounded-full" style={{ backgroundColor: theme.background }} />
             </View>
         </View>
     </View>
@@ -214,13 +217,14 @@ function ConfigButton({ name, onPress, children }: {
     name: string,
     onPress: () => any
 } & PropsWithChildren){
+    const theme = useTheme();
     return <AnimatedPressable onPress={onPress}>
-        <View className="flex flex-row items-center justify-between p-4 bg-background-alt rounded-3xl">
+        <View className="flex flex-row items-center justify-between p-4 rounded-3xl"  style={{ backgroundColor: theme.backgroundAlt }}>
             <View className="flex flex-row items-center gap-3">
                 { children }
-                <Text className="text-foreground">{ name }</Text>
+                <Text style={{ color: theme.foreground }}>{ name }</Text>
             </View>
-            <ChevronRight color={colors.foreground} size={22} />
+            <ChevronRight color={theme.foreground} size={22} />
         </View>
     </AnimatedPressable>
 }
@@ -229,6 +233,7 @@ function ConnectingLoader({ state }: {
     state: string
 }){
     const pulseAnimation = useRef(new Animated.Value(0)).current;
+    const theme = useTheme();
     const pulseOpacity = pulseAnimation.interpolate({
         inputRange: [0, 0.5, 1],
         outputRange: [0, 1, 0]
@@ -250,13 +255,14 @@ function ConnectingLoader({ state }: {
     }, [pulseAnimation, state]);
     
     return <Loader className="relative flex-1 items-center justify-center w-full h-full">
-        <Animated.View className="absolute w-full h-full rounded-full bg-primary/25" style={{
+        <Animated.View className="absolute w-full h-full rounded-full" style={{
+            backgroundColor: theme.rgba(theme.primary, .25),
             transform: [{
                 scale: pulseAnimation
             }],
             opacity: pulseOpacity
         }}>
         </Animated.View>
-        <BluetoothSearching color={colors.primary} size={48}/>
+        <BluetoothSearching color={theme.primary} size={48}/>
     </Loader> 
 }

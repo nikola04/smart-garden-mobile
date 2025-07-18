@@ -8,12 +8,13 @@ import { DeviceRepository } from "repositories/device.repository";
 import { useDeviceStore } from "hooks/useDeviceStore";
 import { PowerMode } from "types/device";
 import { Flame, Leaf, LucideIcon, MonitorCog, Zap } from "lucide-react-native";
-import colors from "constants/colors";
+import useTheme from "hooks/useTheme";
 
 const deviceRepository = DeviceRepository.getInstance();
 
 export default function DeviceConfigScreen(){
     const { data } = useDeviceStore();
+    const theme = useTheme();
     const [name, setName] = useState<string>(data?.device_name ?? '');
     const [powerMode, setPowerMode] = useState<PowerMode|null>(data?.power_mode ?? null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -66,7 +67,8 @@ export default function DeviceConfigScreen(){
     }, []);
 
     return <KeyboardAvoidingView 
-        className="flex-1 bg-background"
+        className="flex-1"
+        style={{ backgroundColor: theme.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0}
     >
@@ -74,21 +76,21 @@ export default function DeviceConfigScreen(){
             <View className="flex-1 w-full gap-12">
                 <View>
                     <View className="flex flex-row items-center gap-2">
-                        <MonitorCog color={colors.foreground} size={16} />
-                        <Text className="font-bold text-foreground text-lg">Configure Device</Text>
+                        <MonitorCog color={theme.foreground} size={16} />
+                        <Text className="font-bold text-lg" style={{ color: theme.foreground }}>Configure Device</Text>
                     </View>
-                    <Text className="text-foreground/40 text-sm">Set device name and others.</Text>
+                    <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .4) }}>Set device name and others.</Text>
                 </View>
                 <View className="gap-8">
                     <ConfigField
                         title="Name"
                         placeholder="ESP32"
                         value={name}
-                        setValue={setName}
+                        onChangeText={setName}
                     />
                     <View className="flex gap-2">
-                        <Text className="text-foreground font-semibold px-2">Wireless Mode:</Text>
-                        <View className="flex-row justify-between bg-background-alt rounded-3xl p-2">
+                        <Text className="font-semibold px-2" style={{ color: theme.foreground }}>Wireless Mode:</Text>
+                        <View className="flex-row justify-between rounded-3xl p-2" style={{ backgroundColor: theme.backgroundAlt }}>
                             { modes.map((mode) => <PowerModeButton key={mode.name} mode={mode} isSelected={powerMode === mode.name} onPress={() => setPowerMode(mode.name)} />) }
                         </View>
                     </View>
@@ -105,6 +107,8 @@ function PowerModeButton({ mode, isSelected, ...rest }: {
     mode: any,
     isSelected: boolean
 } & PropsWithChildren<PressableProps>) {
+    const theme = useTheme();
+
     const scale = useRef(new Animated.Value(isSelected ? 1 : 0.95)).current;
 
     useEffect(() => {
@@ -117,10 +121,10 @@ function PowerModeButton({ mode, isSelected, ...rest }: {
 
     return (
         <Pressable { ...rest }>
-            <Animated.View style={{ transform: [{ scale }] }} className={`px-4 py-2.5 rounded-2xl ${isSelected ? "bg-primary" : "bg-transparent"}`} >
+            <Animated.View style={{ transform: [{ scale }], backgroundColor: isSelected ? theme.primary : undefined }} className='px-4 py-2.5 rounded-2xl'>
                 <View className="flex flex-row items-center gap-2">
-                    <mode.Icon color={isSelected ? colors.background : colors.foreground} size={15} />
-                    <Text className={`text-sm font-semibold ${isSelected ? "text-background" : "text-foreground"}`} >
+                    <mode.Icon color={isSelected ? theme.background : theme.foreground} size={15} />
+                    <Text className='text-sm font-semibold' style={{ color: isSelected ? theme.background : theme.foreground }} >
                         {mode.name.toUpperCase()}
                     </Text>
                 </View>

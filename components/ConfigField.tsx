@@ -1,24 +1,23 @@
-import { View, Text, TextInput } from "react-native";
+import useTheme from "hooks/useTheme";
+import { PropsWithChildren } from "react";
+import { View, Text, TextInput, TextInputProps } from "react-native";
 
-export default function ConfigField({ title, desc, placeholder = "", value, setValue, secureEntry = false }: {
+export default function ConfigField({ title, desc, placeholder = "", ...rest }: {
     title: string;
     desc?: string;
-    placeholder?: string;
-    value: string;
-    setValue: (arg0: string) => any;
-    secureEntry?: boolean;
-}){
+} & PropsWithChildren<TextInputProps>){
+    const theme = useTheme();
+
     return <View className="w-full gap-2">
         <View className="flex flex-row justify-between items-end">
-            <Text className="text-foreground font-semibold px-2">{ title }:</Text>
-            { desc && <Text className="text-foreground/25 text-xs pr-1">{ desc }</Text> }
+            <Text className="font-semibold px-2" style={{ color: theme.foreground }}>{ title }:</Text>
+            { desc && <Text className="text-xs pr-1" style={{ color: theme.rgba(theme.foreground, .25) }}>{ desc }</Text> }
         </View>
         <TextInput 
-            className="p-4 rounded-3xl border border-foreground/10 text-foreground/80 placeholder:text-foreground/40" 
+            className="p-4 rounded-3xl border placeholder:text-foreground/40" 
+            style={{ borderColor: theme.rgba(theme.foreground, .1), color: theme.rgba(theme.foreground, .8) }}
             placeholder={placeholder}
-            value={value}
-            onChangeText={setValue}
-            secureTextEntry={secureEntry}
+            { ...rest }
         />
     </View>
 }

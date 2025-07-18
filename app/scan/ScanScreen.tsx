@@ -6,14 +6,15 @@ import { BleErrorCode, Device } from "react-native-ble-plx";
 import { BLEService } from "services/ble.service";
 import { config } from "constants/config";
 import { RootNavigationProp } from "navigation/RootNavigation";
-import colors from "constants/colors";
 import { AnimatedPressable } from "components/AnimatedPressable";
+import useTheme from "hooks/useTheme";
 
 const bleService = BLEService.getInstance();
 
 export default function ScanScreen() {
     const [state, setState] = useState<'default'|'scanning'|'scanned'|'connecting'>('default')
     const [devices, setDevices] = useState<Device[]>([]);
+    const theme = useTheme();
     const navigation = useNavigation<RootNavigationProp>();
 
     const pulseAnimation = useRef(new Animated.Value(0)).current;
@@ -146,12 +147,13 @@ export default function ScanScreen() {
         }
     }, [animateButton, layoutAnimation, pulseAnimation, state])
     return (
-        <SafeAreaView className="flex-1 bg-background text-foreground">
-            <Text className="font-bold uppercase text-foreground text-center pt-4">{ dynamicText }</Text>
+        <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
+            <Text className="font-bold uppercase text-center pt-4" style={{ color: theme.foreground }}>{ dynamicText }</Text>
             <Animated.View className="items-center justify-center" style={{
                 flex: buttonFlex
             }}>
-                <Animated.View className="absolute w-56 h-56 bg-primary/25 rounded-full" style={{
+                <Animated.View className="absolute w-56 h-56 rounded-full" style={{
+                    backgroundColor: theme.rgba(theme.primary, .25),
                     transform: [{
                         scale: pulseAnimation
                     }],
@@ -161,18 +163,19 @@ export default function ScanScreen() {
                     })
                 }} />
                 <Pressable onPress={handleScan} onLongPress={handleScanReset}>
-                    <Animated.View className="bg-primary rounded-full w-28 h-28 items-center justify-center" style={{
+                    <Animated.View className="rounded-full w-28 h-28 items-center justify-center" style={{
+                        backgroundColor: theme.primary,
                         transform: [{
                             scale: buttonAnimation
                         }]
                     }}>
-                        <Bluetooth size={36} color={"white"}/>
+                        <Bluetooth size={36} color={'white'}/>
                     </Animated.View>
                 </Pressable>
             </Animated.View>
             { state === 'scanned' && devices.length === 0 && <View className="gap-2">
-                <Text className="uppercase font-bold text-foreground text-center text-[13px]">No nearby devices found.</Text>
-                <Text className="text-foreground/80 text-center">Are you holding button on your device?</Text>
+                <Text className="uppercase font-bold text-center text-[13px]" style={{ color: theme.foreground }}>No nearby devices found.</Text>
+                <Text className="text-center" style={{ color: theme.rgba(theme.foreground, .8) }}>Are you holding button on your device?</Text>
             </View> }
             <Animated.View style={{ flex: listFlex }}>
                 <FlatList
@@ -191,13 +194,14 @@ function RenderDevice({ device, handleConnect, disabled }:{
     handleConnect: () => any,
     disabled: boolean
 }) {
+    const theme = useTheme();
     return (
         <AnimatedPressable onPress={handleConnect}>
-            <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-3xl ${disabled && 'opacity-45'}`}>
-                <Text className="text-foreground text-base font-medium">{device.name}</Text>
+            <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 rounded-3xl ${disabled && 'opacity-45'}`} style={{ backgroundColor: theme.backgroundAlt }}>
+                <Text className="text-base font-medium" style={{ color: theme.foreground }}>{device.name}</Text>
                 <View className="flex flex-row items-center gap-2">
-                    <Text className="text-foreground/80 text-sm">{ device.rssi } dBm</Text>
-                    <ChevronRight size={22} color={colors.foreground}/>
+                    <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .8) }}>{ device.rssi } dBm</Text>
+                    <ChevronRight size={22} color={theme.foreground}/>
                 </View>
             </Animated.View>
         </AnimatedPressable>

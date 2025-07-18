@@ -2,11 +2,14 @@ import { Loader2 } from "lucide-react-native";
 import { PropsWithChildren, useEffect, useRef } from "react";
 import { Animated, Easing, PressableProps, Text } from "react-native";
 import { AnimatedPressable } from "./AnimatedPressable";
+import useTheme from "hooks/useTheme";
 
 export default function Button({ title, loading, onPressIn, onPressOut, disabled, ...rest }: {
     title: string;
     loading?: boolean;
 } & PropsWithChildren<PressableProps>){
+    const theme = useTheme();
+
     const spinAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -31,7 +34,7 @@ export default function Button({ title, loading, onPressIn, onPressOut, disabled
     });
 
     return <AnimatedPressable disabled={loading || disabled} {...rest} className="disabled:opacity-50">
-        <Animated.View className="flex items-center justify-center w-full py-4 rounded-full bg-primary">
+        <Animated.View className="flex items-center justify-center w-full py-4 rounded-full" style={{ backgroundColor: theme.primary }}>
             { !loading ? <Text className="text-black text-center font-semibold">{ title }</Text>
             : <Animated.View style={{ transform: [{ rotate: spin }] }}>
                 <Loader2 size={16} />
