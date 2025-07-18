@@ -5,7 +5,9 @@ import { useNavigation } from "@react-navigation/native";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import { BLEService } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
-import ConfigField from "components/ConfigButton";
+import ConfigField from "components/ConfigField";
+import { ServerCog } from "lucide-react-native";
+import colors from "constants/colors";
 
 const bleService = BLEService.getInstance();
 
@@ -53,8 +55,11 @@ export default function APIConfigScreen(){
         <View className="flex-1 justify-between items-center px-8 pt-6 pb-16">
             <View className="flex-1 w-full gap-12">
                 <View>
-                    <Text className="font-bold text-foreground text-lg">Configure API Settings</Text>
-                    <Text className="text-foreground/40 text-sm">Set key generated in project you selected.</Text>
+                    <View className="flex flex-row items-center gap-2">
+                        <ServerCog color={colors.foreground} size={16} />
+                        <Text className="font-bold text-foreground text-lg">Configure API</Text>
+                    </View>
+                    <Text className="text-foreground/40 text-sm">Set key generated in project settings.</Text>
                 </View>
                 <View className="gap-8">
                     <ConfigField

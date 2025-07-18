@@ -3,11 +3,11 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } 
 import { useNavigation } from "@react-navigation/native";
 import { Alert, Animated, KeyboardAvoidingView, Platform, Pressable, PressableProps, Text, View } from "react-native";
 import { RootNavigationProp } from "navigation/RootNavigation";
-import ConfigField from "components/ConfigButton";
+import ConfigField from "components/ConfigField";
 import { DeviceRepository } from "repositories/device.repository";
 import { useDeviceStore } from "hooks/useDeviceStore";
 import { PowerMode } from "types/device";
-import { Flame, Leaf, LucideIcon, Zap } from "lucide-react-native";
+import { Flame, Leaf, LucideIcon, MonitorCog, Zap } from "lucide-react-native";
 import colors from "constants/colors";
 
 const deviceRepository = DeviceRepository.getInstance();
@@ -73,7 +73,10 @@ export default function DeviceConfigScreen(){
         <View className="flex-1 justify-between items-center px-8 pt-6 pb-16">
             <View className="flex-1 w-full gap-12">
                 <View>
-                    <Text className="font-bold text-foreground text-lg">Configure Device Settings</Text>
+                    <View className="flex flex-row items-center gap-2">
+                        <MonitorCog color={colors.foreground} size={16} />
+                        <Text className="font-bold text-foreground text-lg">Configure Device</Text>
+                    </View>
                     <Text className="text-foreground/40 text-sm">Set device name and others.</Text>
                 </View>
                 <View className="gap-8">
@@ -85,7 +88,7 @@ export default function DeviceConfigScreen(){
                     />
                     <View className="flex gap-2">
                         <Text className="text-foreground font-semibold px-2">Wireless Mode:</Text>
-                        <View className="flex-row justify-between bg-background-alt rounded-full p-2">
+                        <View className="flex-row justify-between bg-background-alt rounded-3xl p-2">
                             { modes.map((mode) => <PowerModeButton key={mode.name} mode={mode} isSelected={powerMode === mode.name} onPress={() => setPowerMode(mode.name)} />) }
                         </View>
                     </View>
@@ -114,7 +117,7 @@ function PowerModeButton({ mode, isSelected, ...rest }: {
 
     return (
         <Pressable { ...rest }>
-            <Animated.View style={{ transform: [{ scale }] }} className={`px-4 py-2.5 rounded-full ${isSelected ? "bg-primary" : "bg-transparent"}`} >
+            <Animated.View style={{ transform: [{ scale }] }} className={`px-4 py-2.5 rounded-2xl ${isSelected ? "bg-primary" : "bg-transparent"}`} >
                 <View className="flex flex-row items-center gap-2">
                     <mode.Icon color={isSelected ? colors.background : colors.foreground} size={15} />
                     <Text className={`text-sm font-semibold ${isSelected ? "text-background" : "text-foreground"}`} >

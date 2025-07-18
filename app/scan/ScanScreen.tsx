@@ -193,7 +193,7 @@ function RenderDevice({ device, handleConnect, disabled }:{
 }) {
     return (
         <AnimatedPressable onPress={handleConnect}>
-            <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
+            <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-3xl ${disabled && 'opacity-45'}`}>
                 <Text className="text-foreground text-base font-medium">{device.name}</Text>
                 <View className="flex flex-row items-center gap-2">
                     <Text className="text-foreground/80 text-sm">{ device.rssi } dBm</Text>

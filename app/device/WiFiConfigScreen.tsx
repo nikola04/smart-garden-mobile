@@ -3,8 +3,10 @@ import { useNavigation } from "@react-navigation/native";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
-import ConfigField from "components/ConfigButton";
+import ConfigField from "components/ConfigField";
 import { DeviceRepository } from "repositories/device.repository";
+import { WifiCog } from "lucide-react-native";
+import colors from "constants/colors";
 
 const deviceRepository = DeviceRepository.getInstance();
 
@@ -57,7 +59,10 @@ export default function WiFiConfigScreen(){
         <View className="flex-1 justify-between items-center px-8 pt-6 pb-16">
             <View className="flex-1 w-full gap-12">
                 <View>
-                    <Text className="font-bold text-foreground text-lg">Configure WiFi Settings</Text>
+                    <View className="flex flex-row items-center gap-2">
+                        <WifiCog color={colors.foreground} size={16} />
+                        <Text className="font-bold text-foreground text-lg">Configure Wi-Fi</Text>
+                    </View>
                     <Text className="text-foreground/40 text-sm">Set wifi ssid and password.</Text>
                 </View>
                 <View className="gap-8">

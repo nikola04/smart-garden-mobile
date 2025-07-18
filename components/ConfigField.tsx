@@ -14,7 +14,7 @@ export default function ConfigField({ title, desc, placeholder = "", value, setV
             { desc && <Text className="text-foreground/25 text-xs pr-1">{ desc }</Text> }
         </View>
         <TextInput 
-            className="p-4 rounded-full border border-foreground/10 text-foreground/80 placeholder:text-foreground/40" 
+            className="p-4 rounded-3xl border border-foreground/10 text-foreground/80 placeholder:text-foreground/40" 
             placeholder={placeholder}
             value={value}
             onChangeText={setValue}

@@ -187,7 +187,7 @@ function StatusBox({ name, status, icon, capitalize = false, children, ...rest }
     }, [opacity, status]);
 
     return <AnimatedPressable {...rest} className="flex w-32">
-        <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
+        <View className="flex p-4 gap-4 bg-background-alt rounded-3xl">
             <Icon size={16} color={colors.foreground} />
             <View className="flex gap-1">
                 <Text className="text-foreground capitalize">{ name }</Text>
@@ -200,7 +200,7 @@ function StatusBox({ name, status, icon, capitalize = false, children, ...rest }
 
 function StatusBoxSkeleton(){
     return <View className="flex w-32">
-        <View className="flex p-4 gap-4 bg-background-alt rounded-xl">
+        <View className="flex p-4 gap-4 bg-background-alt rounded-3xl">
             <ViewSkeleton className="w-6 h-6 bg-background rounded-lg"/>
             <View className="flex gap-2.5">
                 <ViewSkeleton className="flex w-3/4 h-4 bg-background rounded-full" />
@@ -215,7 +215,7 @@ function ConfigButton({ name, onPress, children }: {
     onPress: () => any
 } & PropsWithChildren){
     return <AnimatedPressable onPress={onPress}>
-        <View className="flex flex-row items-center justify-between p-4 bg-background-alt rounded-xl">
+        <View className="flex flex-row items-center justify-between p-4 bg-background-alt rounded-3xl">
             <View className="flex flex-row items-center gap-3">
                 { children }
                 <Text className="text-foreground">{ name }</Text>
