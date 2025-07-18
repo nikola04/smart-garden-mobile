@@ -26,10 +26,11 @@ export class DeviceRepository {
     private setData(data: Partial<DeviceConfig>): void {
         const { data: old, setData } = useDeviceStore.getState();
         setData({ 
-            device_name: '',
-            wifi_ssid: '',
-            wifi_password: '',
-            api_key: '',
+            device_name: null,
+            power_mode: null,
+            wifi_ssid: null,
+            wifi_password: null,
+            api_key: null,
             ...old,
             ...data
         });
@@ -64,6 +65,8 @@ export class DeviceRepository {
     }
 
     public async updateData(data: Partial<DeviceConfig>): Promise<boolean> {
+        console.log(data)
+        console.log(JSON.stringify(data))
         const response = await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, JSON.stringify(data));
         if(response) {
             this.setData(data);

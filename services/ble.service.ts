@@ -2,14 +2,8 @@ import { Alert, PermissionsAndroid, Platform } from "react-native";
 import { BleError, BleErrorCode, BleManager, Device, Subscription } from "react-native-ble-plx";
 import { Buffer } from 'buffer';
 
-export interface IStrippedDevice {
-    id: string;
-    name: string | null;
-    isConnectable: boolean|null;
-}
-
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
-export type StateListener = (state: 'connecting' | 'connected' | 'disconnected' | 'reconnecting') => void;
+export type StateListener = (state: ConnectionState) => void;
 
 export class BLEService {
     private manager: BleManager;
@@ -46,7 +40,7 @@ export class BLEService {
         return state === 'PoweredOn';
     }
 
-    public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: IStrippedDevice | null) => void, onStop?: () => void) {
+    public async startScan(allowedUUIDs: string[], timeout: number, callback: (error: BleError | null, device: Device | null) => void, onStop?: () => void) {
         const granted = await requestBluetoothPermission();
         if (!granted) {
             Alert.alert('Bluetooth Permission', 'Please allow Bluetooth in your settings.',[{

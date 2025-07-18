@@ -42,8 +42,8 @@ export default function WiFiConfigScreen(){
             if(isCanceled.current || !data?.device_name)
                 return;
 
-            setSSID(data.wifi_ssid);
-            setPswd(data.wifi_password);
+            setSSID(data.wifi_ssid ?? '');
+            setPswd(data.wifi_password ?? '');
         })();
         
         return () => { isCanceled.current = true };

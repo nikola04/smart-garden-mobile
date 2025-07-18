@@ -21,12 +21,12 @@ export default function APIConfigScreen(){
         try{
             setLoading(true);
             const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristicUUIDs.deviceConfigs;
+            const characteristicUUID = config.characteristicUUIDs.device;
             const data = ({
                 api_key: key
             });
 
-            await bleService.writeCharacteristicWithResponseForService(serviceUUID, characteristicUUID, JSON.stringify(data));
+            await bleService.writeCharacteristicWithResponse(serviceUUID, characteristicUUID, JSON.stringify(data));
             if(isCanceled.current) return;
             Alert.alert('API Key updated successfully.')
             navigation.goBack();

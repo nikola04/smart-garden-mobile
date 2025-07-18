@@ -2,8 +2,8 @@ import { Bluetooth, ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, FlatList, SafeAreaView, Text, View, Animated, Easing, Alert } from "react-native";
 import { useNavigation } from '@react-navigation/native'
-import { BleErrorCode } from "react-native-ble-plx";
-import { BLEService, IStrippedDevice } from "services/ble.service";
+import { BleErrorCode, Device } from "react-native-ble-plx";
+import { BLEService } from "services/ble.service";
 import { config } from "constants/config";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
@@ -13,7 +13,7 @@ const bleService = BLEService.getInstance();
 
 export default function ScanScreen() {
     const [state, setState] = useState<'default'|'scanning'|'scanned'|'connecting'>('default')
-    const [devices, setDevices] = useState<IStrippedDevice[]>([]);
+    const [devices, setDevices] = useState<Device[]>([]);
     const navigation = useNavigation<RootNavigationProp>();
 
     const pulseAnimation = useRef(new Animated.Value(0)).current;
@@ -88,7 +88,7 @@ export default function ScanScreen() {
 
             setDevices((prevDevices) => {
                 if(prevDevices.some(dev => dev.id === device.id)) return prevDevices;
-                return ([...prevDevices, { ...device, name: device.name }]);
+                return ([...prevDevices, device ]);
             });
         }, () => setState('scanned'));
 
@@ -100,7 +100,7 @@ export default function ScanScreen() {
         setState('default');
     }
 
-    const handleConnect = useCallback(async (device: IStrippedDevice) => {
+    const handleConnect = useCallback(async (device: Device) => {
         if(state !== 'scanned' && state !== 'scanning') return;
         setState('connecting');
         bleService.stopScan();
@@ -179,22 +179,23 @@ export default function ScanScreen() {
                     className="flex-grow w-full"
                     data={devices}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <RenderDevice item={item} handleConnect={() => handleConnect(item)} disabled={state === 'connecting'}/>}
+                    renderItem={({ item }) => <RenderDevice device={item} handleConnect={() => handleConnect(item)} disabled={state === 'connecting'}/>}
                 />
             </Animated.View>
         </SafeAreaView>
     );
 }
 
-function RenderDevice({ item, handleConnect, disabled }:{
-    item: IStrippedDevice,
+function RenderDevice({ device, handleConnect, disabled }:{
+    device: Device,
     handleConnect: () => any,
     disabled: boolean
 }) {
     return (
         <AnimatedPressable onPress={handleConnect}>
             <Animated.View className={`flex flex-row items-center justify-between mx-6 my-1 p-5 bg-background-alt rounded-xl ${disabled && 'opacity-45'}`}>
-                <Text className="text-foreground text-base font-medium">{item.name}</Text>
+                <Text className="text-foreground text-base font-medium">{device.name}</Text>
+                <Text className="text-foreground">{ device.rssi } dBm</Text>
                 <ChevronRight size={22} color={colors.foreground}/>
             </Animated.View>
         </AnimatedPressable>

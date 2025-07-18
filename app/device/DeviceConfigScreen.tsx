@@ -1,28 +1,42 @@
 import Button from "components/Button";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { Alert, Animated, KeyboardAvoidingView, Platform, Pressable, PressableProps, Text, View } from "react-native";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import ConfigField from "components/ConfigButton";
 import { DeviceRepository } from "repositories/device.repository";
 import { useDeviceStore } from "hooks/useDeviceStore";
+import { PowerMode } from "types/device";
+import { Flame, Leaf, LucideIcon, Zap } from "lucide-react-native";
+import colors from "constants/colors";
 
 const deviceRepository = DeviceRepository.getInstance();
 
 export default function DeviceConfigScreen(){
     const { data } = useDeviceStore();
     const [name, setName] = useState<string>(data?.device_name ?? '');
+    const [powerMode, setPowerMode] = useState<PowerMode|null>(data?.power_mode ?? null);
     const [loading, setLoading] = useState<boolean>(true);
     const navigation = useNavigation<RootNavigationProp>();
     
     const isCanceled = useRef(false);
+
+    const hasChanges = useMemo(() => {
+        if(!powerMode) 
+            return false;
+        if(!name || name.length < 1)
+            return false;
+
+        return name !== data?.device_name || powerMode !== data.power_mode;
+    }, [name, powerMode, data?.device_name, data?.power_mode]);
 
     const handleSave = useCallback(async () => {
         if(loading) return;
         setLoading(true);
 
         const success = await deviceRepository.updateData({
-            device_name: name
+            device_name: name,
+            power_mode: powerMode ?? undefined
         });
         if(isCanceled.current) return;
 
@@ -31,19 +45,21 @@ export default function DeviceConfigScreen(){
 
         navigation.goBack();
         setLoading(false);
-    }, [loading, name, navigation]);
+    }, [loading, name, navigation, powerMode]);
 
     useEffect(() => {
         isCanceled.current = false;
 
         (async () => {
+            setLoading(true);
             const data = await deviceRepository.getData();
-            setLoading(false);
 
             if(isCanceled.current || !data?.device_name)
                 return;
 
+            setLoading(false);
             setName(data.device_name);
+            setPowerMode(data.power_mode);
         })();
         
         return () => { isCanceled.current = true };
@@ -67,11 +83,56 @@ export default function DeviceConfigScreen(){
                         value={name}
                         setValue={setName}
                     />
+                    <View className="flex gap-2">
+                        <Text className="text-foreground font-semibold px-2">Wireless Mode:</Text>
+                        <View className="flex-row justify-between bg-background-alt rounded-full p-2">
+                            { modes.map((mode) => <PowerModeButton key={mode.name} mode={mode} isSelected={powerMode === mode.name} onPress={() => setPowerMode(mode.name)} />) }
+                        </View>
+                    </View>
                 </View>
             </View>
             <View className="flex w-full">
-                <Button title="Save" loading={loading} onPress={handleSave} />
+                <Button title="Save" disabled={!hasChanges} loading={loading} onPress={handleSave} />
             </View>
         </View>
     </KeyboardAvoidingView>
 }
+
+function PowerModeButton({ mode, isSelected, ...rest }: {
+    mode: any,
+    isSelected: boolean
+} & PropsWithChildren<PressableProps>) {
+    const scale = useRef(new Animated.Value(isSelected ? 1 : 0.95)).current;
+
+    useEffect(() => {
+        Animated.spring(scale, {
+            toValue: isSelected ? 1 : 0.95,
+            useNativeDriver: true,
+            friction: 5,
+        }).start();
+    }, [isSelected, scale]);
+
+    return (
+        <Pressable { ...rest }>
+            <Animated.View style={{ transform: [{ scale }] }} className={`px-4 py-2.5 rounded-full ${isSelected ? "bg-primary" : "bg-transparent"}`} >
+                <View className="flex flex-row items-center gap-2">
+                    <mode.Icon color={isSelected ? colors.background : colors.foreground} size={15} />
+                    <Text className={`text-sm font-semibold ${isSelected ? "text-background" : "text-foreground"}`} >
+                        {mode.name.toUpperCase()}
+                    </Text>
+                </View>
+            </Animated.View>
+        </Pressable>
+    );
+}
+
+const modes: { name: PowerMode, Icon: LucideIcon }[] = [{
+    name: 'eco',
+    Icon: Leaf
+}, {
+    name: 'balanced',
+    Icon: Flame
+}, {
+    name: 'power',
+    Icon: Zap
+}];

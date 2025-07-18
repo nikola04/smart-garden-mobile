@@ -3,7 +3,7 @@ import { PropsWithChildren, useEffect, useRef } from "react";
 import { Animated, Easing, PressableProps, Text } from "react-native";
 import { AnimatedPressable } from "./AnimatedPressable";
 
-export default function Button({ title, loading, onPressIn, onPressOut, ...rest }: {
+export default function Button({ title, loading, onPressIn, onPressOut, disabled, ...rest }: {
     title: string;
     loading?: boolean;
 } & PropsWithChildren<PressableProps>){
@@ -30,7 +30,7 @@ export default function Button({ title, loading, onPressIn, onPressOut, ...rest 
         outputRange: ['0deg', '360deg']
     });
 
-    return <AnimatedPressable disabled={loading} {...rest}>
+    return <AnimatedPressable disabled={loading || disabled} {...rest} className="disabled:opacity-50">
         <Animated.View className="flex items-center justify-center w-full py-4 rounded-full bg-primary">
             { !loading ? <Text className="text-black text-center font-semibold">{ title }</Text>
             : <Animated.View style={{ transform: [{ rotate: spin }] }}>

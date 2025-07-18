@@ -2,8 +2,8 @@ import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, PressableProps, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { Battery, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
-import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
+import { Battery, BluetoothConnected, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
+import { BLEService, ConnectionState } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
 import { AnimatedPressable } from "components/AnimatedPressable";
@@ -11,6 +11,7 @@ import { useSensorStore } from "hooks/useSensorsStore";
 import { SensorsRepository } from "repositories/sensors.repository";
 import ViewSkeleton from "components/ViewSkeleton";
 import * as Haptics from 'expo-haptics';
+import { Device } from "react-native-ble-plx";
 
 const bleService = BLEService.getInstance();
 const sensorsRepository = SensorsRepository.getInstance();
@@ -28,9 +29,11 @@ const getStateColor = (state: ConnectionState) => {
 }
 
 export default function DeviceScreen({ route }: StaticScreenProps<{
-    device: IStrippedDevice
+    device: Device
 }>) {
     const { data } = useSensorStore();
+    const [device, setDevice] = useState<Device|null>(null);
+    const [rssi, setRSSI] = useState<number|null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [state, setState] = useState<ConnectionState>('disconnected');
     const navigation = useNavigation<RootNavigationProp>();
@@ -72,11 +75,32 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     }, [state]);
 
     useEffect(() => {
+        let mounted = true;
+        if(!device)
+            return;
+
+        const interval = setInterval(() => device.readRSSI().then(updated => {
+            if(mounted)
+            setRSSI(updated.rssi);
+        }), 2500);
+
+        return () => { 
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [device]);
+
+    useEffect(() => {
+        let mounted = true;
         const stateHandler = (state: ConnectionState) => setState(state);
         bleService.addConnectionStateListener(stateHandler);
-        bleService.connectToDevice(params.device.id)
+        bleService.connectToDevice(params.device.id).then(device => {
+            if(!mounted) return;
+            setDevice(device);
+        })
 
         return () => {
+            mounted = false;
             bleService.removeConnectionStateListener(stateHandler);
             bleService.disconnectFromDevice();
         }
@@ -104,7 +128,8 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
                 <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} className="flex-none w-full h-fit gap-6">
                     <View className="flex flex-row px-6 pt-3 gap-4">
                     {   !loading ? <> 
-                        <StatusBox name="Wi-Fi" status={sensors.wifi} icon={Wifi} />
+                        <StatusBox name="Wi-Fi" capitalize={true} status={sensors.wifi} icon={Wifi} />
+                        <StatusBox name="Bluetooth" status={`${rssi ?? '-'} dBm`} icon={BluetoothConnected} />
                         <StatusBox name="Battery" status={sensors.battery} icon={Battery} />
                         <StatusBox name="Temperature" status={sensors.air_temp} icon={ThermometerSun} />
                         <StatusBox name="Humidity" status={sensors.air_hum} icon={Waves} />
@@ -134,10 +159,11 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     );
 }
 
-function StatusBox({ name, status, icon, children, ...rest }: {
+function StatusBox({ name, status, icon, capitalize = false, children, ...rest }: {
     name: string;
     status: string;
     icon: LucideIcon;
+    capitalize?: boolean;
 } & PropsWithChildren<PressableProps>){
     const opacity = useRef(new Animated.Value(0.7)).current;
     const Icon = icon;
@@ -165,7 +191,7 @@ function StatusBox({ name, status, icon, children, ...rest }: {
             <Icon size={16} color={colors.foreground} />
             <View className="flex gap-1">
                 <Text className="text-foreground capitalize">{ name }</Text>
-                <Animated.Text style={{ opacity }} className="text-foreground text-sm capitalize">{ status }</Animated.Text>
+                <Animated.Text style={{ opacity }} className={`text-foreground text-sm ${capitalize ? 'capitalize' : ''}`}>{ status }</Animated.Text>
             </View>
             { children }
         </View>
