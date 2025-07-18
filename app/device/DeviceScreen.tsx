@@ -2,7 +2,7 @@ import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, PressableProps, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { Battery, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
+import { Battery, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState, IStrippedDevice } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import colors from "constants/colors";
@@ -10,6 +10,7 @@ import { AnimatedPressable } from "components/AnimatedPressable";
 import { useSensorStore } from "hooks/useSensorsStore";
 import { SensorsRepository } from "repositories/sensors.repository";
 import ViewSkeleton from "components/ViewSkeleton";
+import * as Haptics from 'expo-haptics';
 
 const bleService = BLEService.getInstance();
 const sensorsRepository = SensorsRepository.getInstance();
@@ -52,6 +53,11 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         if(state === 'connected') return 'Connected';
     }, [state]);
 
+    const handlePowerLongPress = () => {
+        Haptics.selectionAsync();
+        console.log('should open restart and sleep dialog')
+    }
+
     useEffect(() => {
         if(state !== 'connected')
             return;
@@ -82,16 +88,21 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
      
     return (
         <SafeAreaView className="flex-1 bg-background">
-            <View className="flex gap-2 py-8">
+            <View className="relative flex gap-2 py-8">
                 <Text className="font-bold text-base text-center text-foreground">{ params.device.name }</Text>
                 <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>
+                { state === 'connected' && <AnimatedPressable className="absolute right-6 top-9" onLongPress={handlePowerLongPress}>
+                    <View className="bg-background-alt p-3 rounded-full">
+                        <Power color={colors.foreground} size={18} style={{ marginTop: -1 }} />
+                    </View>
+                </AnimatedPressable> }
             </View>
             { (state === 'connecting' || state === 'reconnecting') && <View className="flex-1 items-center justify-center">
                 <ConnectingLoader state={state} />
             </View> }
             { state === 'connected' && <View className="flex-1 gap-8">
                 <ScrollView showsHorizontalScrollIndicator={false} horizontal={true} className="flex-none w-full h-fit gap-6">
-                    <View className="flex flex-row px-6 py-3 gap-4">
+                    <View className="flex flex-row px-6 pt-3 gap-4">
                     {   !loading ? <> 
                         <StatusBox name="Wi-Fi" status={sensors.wifi} icon={Wifi} />
                         <StatusBox name="Battery" status={sensors.battery} icon={Battery} />
