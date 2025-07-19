@@ -62,6 +62,7 @@ export default function WiFiConfigScreen({ navigation }: WiFiConfigScreenProps){
 
         setLoading(false);
         Alert.alert('Wi-Fi Settings updated successfully.')
+        sheetRef.current?.close();
         navigation.goBack();
     }, [loading, navigation, pswd, ssid]);
 
@@ -92,6 +93,7 @@ export default function WiFiConfigScreen({ navigation }: WiFiConfigScreenProps){
 
     useEffect(() => {
         if(state !== 'connected'){
+            sheetRef.current?.close();
             navigation.goBack();
             return;
         }

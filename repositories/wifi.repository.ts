@@ -31,22 +31,19 @@ export class WiFiRepository {
         setStatus('scanning');
         resetData();
 
-        await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, 'scan').then(response => {
-            console.log(response);
-            return null;
-        });
+        await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, 'scan');
 
         return true;
     }
 
     private handleLiveDataUpdate(raw: string): void {
+        console.log('notified:', raw)
         const { setStatus } = useWiFiScanStore.getState();
         if(raw === 'done'){
             setStatus('scanned')
             return;
         }
         if(raw === 'fail'){
-            console.log('fail')
             setStatus('failed');
             return;
         }

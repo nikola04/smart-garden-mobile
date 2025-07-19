@@ -59,7 +59,6 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
 
     const handlePowerLongPress = () => {
         Haptics.selectionAsync();
-        console.log('should open restart and sleep dialog')
     }
 
     useEffect(() => {
