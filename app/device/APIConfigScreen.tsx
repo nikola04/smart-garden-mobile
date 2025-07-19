@@ -3,7 +3,7 @@ import { config } from "constants/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
-import { BLEService } from "services/ble.service";
+import { BLEService, ConnectionState } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import ConfigField from "components/ConfigField";
 import { ServerCog } from "lucide-react-native";
@@ -15,6 +15,7 @@ export default function APIConfigScreen(){
     const [key, setKey] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const navigation = useNavigation<RootNavigationProp>();
+    const [state, setState] = useState<ConnectionState>('connected');
     const theme = useTheme();
     
     const isCanceled = useRef(false);
@@ -24,7 +25,7 @@ export default function APIConfigScreen(){
         try{
             setLoading(true);
             const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristicUUIDs.device;
+            const characteristicUUID = config.characteristic.device.uuid;
             const data = ({
                 api_key: key
             });
@@ -42,9 +43,20 @@ export default function APIConfigScreen(){
     }, [key, loading, navigation]);
 
     useEffect(() => {
+        if(state !== 'connected'){
+            navigation.goBack();
+            return;
+        }
+    }, [navigation, state]);
+
+    useEffect(() => {
         isCanceled.current = false;
+        const stateHandler = (state: ConnectionState) => setState(state);
+        bleService.addConnectionStateListener(stateHandler);
+
         return () => {
             isCanceled.current = true;
+            bleService.removeConnectionStateListener(stateHandler);
         }
     }, []);
 

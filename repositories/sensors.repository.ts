@@ -16,7 +16,7 @@ export class SensorsRepository {
     constructor() {
         this.bleService = BLEService.getInstance();
         this.serviceUUID = config.allowedServiceUUIDs[0];
-        this.characteristicUUID = config.characteristicUUIDs.sensors;
+        this.characteristicUUID = config.characteristic.sensors.uuid;
     }
 
     public static getInstance() {

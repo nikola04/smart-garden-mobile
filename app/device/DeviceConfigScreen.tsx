@@ -9,8 +9,11 @@ import { useDeviceStore } from "hooks/useDeviceStore";
 import { PowerMode } from "types/device";
 import { Flame, Leaf, LucideIcon, MonitorCog, Zap } from "lucide-react-native";
 import useTheme from "hooks/useTheme";
+import { BLEService, ConnectionState } from "services/ble.service";
 
 const deviceRepository = DeviceRepository.getInstance();
+const bleService = BLEService.getInstance();
+
 
 export default function DeviceConfigScreen(){
     const { data } = useDeviceStore();
@@ -18,6 +21,7 @@ export default function DeviceConfigScreen(){
     const [name, setName] = useState<string>(data?.device_name ?? '');
     const [powerMode, setPowerMode] = useState<PowerMode|null>(data?.power_mode ?? null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [state, setState] = useState<ConnectionState>('connected');
     const navigation = useNavigation<RootNavigationProp>();
     
     const isCanceled = useRef(false);
@@ -49,7 +53,16 @@ export default function DeviceConfigScreen(){
     }, [loading, name, navigation, powerMode]);
 
     useEffect(() => {
+        if(state !== 'connected'){
+            navigation.goBack();
+            return;
+        }
+    }, [navigation, state]);
+
+    useEffect(() => {
         isCanceled.current = false;
+        const stateHandler = (state: ConnectionState) => setState(state);
+        bleService.addConnectionStateListener(stateHandler);
 
         (async () => {
             setLoading(true);
@@ -63,7 +76,10 @@ export default function DeviceConfigScreen(){
             setPowerMode(data.power_mode);
         })();
         
-        return () => { isCanceled.current = true };
+        return () => {
+            isCanceled.current = true
+            bleService.removeConnectionStateListener(stateHandler);
+        };
     }, []);
 
     return <KeyboardAvoidingView 

@@ -1,24 +1,52 @@
 import Button from "components/Button";
 import { RootStackParamList } from "navigation/RootNavigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Text, TextInput, View } from "react-native";
 import ConfigField from "components/ConfigField";
 import { DeviceRepository } from "repositories/device.repository";
 import { WifiCog } from "lucide-react-native";
 import { StackScreenProps } from "@react-navigation/stack";
 import { AnimatedPressable } from "components/AnimatedPressable";
+import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
 import useTheme from "hooks/useTheme";
+import { Portal } from "react-native-portalize";
+import { WiFiRepository } from "repositories/wifi.repository";
+import { BLEService, ConnectionState } from "services/ble.service";
+import { useWiFiScanStore } from "hooks/useWiFiScanStore";
+import { WiFiNetwork } from "types/wifi";
 
 const deviceRepository = DeviceRepository.getInstance();
+const wifiRepository = WiFiRepository.getInstance();
+
+const bleService = BLEService.getInstance();
 
 type WiFiConfigScreenProps = StackScreenProps<RootStackParamList, 'WiFi Configuration'>;
 export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreenProps){
     const [ssid, setSSID] = useState<string>();
     const [pswd, setPswd] = useState<string>("");
+    const [state, setState] = useState<ConnectionState>('connected');
     const [loading, setLoading] = useState<boolean>(true);
+    const { data: scanned } = useWiFiScanStore();
     const theme = useTheme();
     
-    const isCanceled = useRef(false);
+    const mounted = useRef(false);
+    const pswdRef = useRef<TextInput>(null);
+    const sheetRef = useRef<BottomSheet>(null);
+
+    const snapPoints = useMemo(() => ["40%", "70%"], []);
+
+    const selectNetwork = (network: WiFiNetwork) => {
+        setSSID(network.ssid)
+        setPswd("");
+        sheetRef.current?.close();
+        pswdRef.current?.focus();
+    }
+
+    const handleScanNetworks = () => {
+        Keyboard.dismiss();
+        sheetRef.current?.snapToIndex(0);
+        wifiRepository.startScan();
+    }
     
     const handleSave = useCallback(async () => {
         if(loading) return;
@@ -29,7 +57,7 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
             wifi_password: pswd
         });
 
-        if(isCanceled.current) return;
+        if(!mounted.current) return;
 
         setLoading(false);
         Alert.alert('Wi-Fi Settings updated successfully.')
@@ -37,21 +65,41 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
     }, [loading, navigation, pswd, ssid]);
 
     useEffect(() => {
-        isCanceled.current = false;
+        mounted.current = true;
+        setLoading(true);
+
+        const stateHandler = (state: ConnectionState) => setState(state);
+        bleService.addConnectionStateListener(stateHandler);
 
         (async () => {
             const data = await deviceRepository.getData();
             setLoading(false);
 
-            if(isCanceled.current || !data?.device_name)
+            if(!mounted.current || !data?.device_name)
                 return;
 
             setSSID(data.wifi_ssid ?? '');
             setPswd(data.wifi_password ?? '');
         })();
         
-        return () => { isCanceled.current = true };
+        return () => {
+            mounted.current = false
+            bleService.removeConnectionStateListener(stateHandler);
+        };
     }, [])
+
+    useEffect(() => {
+        if(state !== 'connected'){
+            navigation.goBack();
+            return;
+        }
+
+        const subscription = wifiRepository.startLiveListening();
+
+        return () => {
+            subscription?.remove();
+        }
+    }, [navigation, state]);
     
     return <KeyboardAvoidingView 
         className="flex-1"
@@ -82,9 +130,10 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
                         value={pswd}
                         onChangeText={setPswd}
                         secureTextEntry={true}
+                        ref={pswdRef}
                     />
                 </View>
-                <AnimatedPressable>
+                <AnimatedPressable onPress={handleScanNetworks}>
                     <View className="flex items-center justify-center p-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
                         <Text className="text-center" style={{ color: theme.rgba(theme.foreground, .8) }}>Scan Networks</Text>
                     </View>
@@ -93,6 +142,51 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
             <View className="flex w-full">
                 <Button title="Save" loading={loading} onPress={handleSave}/>
             </View>
+            <Portal>
+                <BottomSheet 
+                    ref={sheetRef}
+                    snapPoints={snapPoints}
+                    index={-1}
+                    enableDynamicSizing={false}
+                    enablePanDownToClose={true}
+                    backgroundStyle={{ 
+                        backgroundColor: theme.background,
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20
+                    }}
+                    handleIndicatorStyle={{
+                        backgroundColor: theme.foreground
+                    }}
+                    backdropComponent={(props) => <BottomSheetBackdrop
+                        {...props}
+                        appearsOnIndex={0}
+                        disappearsOnIndex={-1}
+                        opacity={0.5}
+                        pressBehavior="close"
+                    />}
+                >
+                    <Text className="text-center py-4 uppercase font-bold" style={{ color: theme.foreground }}>Nearby networks</Text>
+                    <BottomSheetScrollView contentContainerClassName="flex-1 gap-2 p-4">
+                        { scanned.map((network) => <ScannedNetwork key={network.ssid} network={network} onSelect={() => selectNetwork(network)} />)}
+                    </BottomSheetScrollView>
+                </BottomSheet>
+            </Portal>
         </View>
     </KeyboardAvoidingView>
+}
+
+function ScannedNetwork({ network, onSelect }: {
+    network: WiFiNetwork,
+    onSelect: (network: WiFiNetwork) => void;
+}){
+    const theme = useTheme();
+
+    const handlePress = () => onSelect(network);
+
+    return <AnimatedPressable key={network.ssid} onPress={handlePress}>
+        <View className="flex flex-row items-center justify-between p-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
+            <Text style={{ color: theme.foreground }}>{ network.ssid }</Text>
+            <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .7) }}>{ network.rssi } dBm</Text>
+        </View>
+    </AnimatedPressable>
 }
