@@ -10,7 +10,6 @@ export class WiFiRepository {
     private serviceUUID: string;
     private characteristicUUID: string;
     private currentLiveSubscription: Subscription | null = null;
-    private scanning = false;
 
     constructor() {
         this.bleService = BLEService.getInstance();
@@ -25,12 +24,12 @@ export class WiFiRepository {
     }
 
     public async startScan(): Promise<boolean> {
-        if(this.scanning)
+        const { resetData, status, setStatus } = useWiFiScanStore.getState();
+        if(status === 'scanning')
             return false;
 
-        this.scanning = true;
-
-        useWiFiScanStore.getState().resetData();
+        setStatus('scanning');
+        resetData();
 
         await this.bleService.writeCharacteristicWithResponse(this.serviceUUID, this.characteristicUUID, 'scan').then(response => {
             console.log(response);
@@ -41,13 +40,14 @@ export class WiFiRepository {
     }
 
     private handleLiveDataUpdate(raw: string): void {
+        const { setStatus } = useWiFiScanStore.getState();
         if(raw === 'done'){
-            this.scanning = false;
+            setStatus('scanned')
             return;
         }
         if(raw === 'fail'){
             console.log('fail')
-            this.scanning = false;
+            setStatus('failed');
             return;
         }
         const json = JSON.parse(raw) as WiFiNetwork;

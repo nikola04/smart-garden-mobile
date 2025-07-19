@@ -16,18 +16,6 @@ import useTheme from "hooks/useTheme";
 const bleService = BLEService.getInstance();
 const sensorsRepository = SensorsRepository.getInstance();
 
-const getStateColor = (state: ConnectionState, primary: string) => {
-    switch (state) {
-        case 'connecting':
-        case 'reconnecting':
-            return '#FACC15';
-        case 'disconnected':
-            return '#EF4444';
-        default:
-            return primary;
-    }
-}
-
 export default function DeviceScreen({ route }: StaticScreenProps<{
     device: Device
 }>) {
@@ -56,6 +44,18 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         if(state === 'disconnected') return 'Disconnected';
         if(state === 'connected') return 'Connected';
     }, [state]);
+
+    const getStateColor = (state: ConnectionState) => {
+        switch (state) {
+            case 'connecting':
+            case 'reconnecting':
+                return theme.warn;
+            case 'disconnected':
+                return theme.danger;
+            default:
+                return theme.primary;
+        }
+    }
 
     const handlePowerLongPress = () => {
         Haptics.selectionAsync();
@@ -115,7 +115,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
             <View className="relative flex gap-2 py-8">
                 <Text className="font-bold text-base text-center" style={{ color: theme.foreground }}>{ params.device.name }</Text>
-                <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state, theme.primary) }}>{ dynamicText }</Text>
+                <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>
                 { state === 'connected' && <AnimatedPressable className="absolute right-6 top-9" onLongPress={handlePowerLongPress}>
                     <View className="p-3 rounded-full" style={{ backgroundColor: theme.backgroundAlt }}>
                         <Power color={theme.foreground} size={18} style={{ marginTop: -1 }} />

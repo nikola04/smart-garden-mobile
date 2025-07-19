@@ -14,6 +14,7 @@ import { WiFiRepository } from "repositories/wifi.repository";
 import { BLEService, ConnectionState } from "services/ble.service";
 import { useWiFiScanStore } from "hooks/useWiFiScanStore";
 import { WiFiNetwork } from "types/wifi";
+import Spinner from "components/Spinner";
 
 const deviceRepository = DeviceRepository.getInstance();
 const wifiRepository = WiFiRepository.getInstance();
@@ -21,12 +22,12 @@ const wifiRepository = WiFiRepository.getInstance();
 const bleService = BLEService.getInstance();
 
 type WiFiConfigScreenProps = StackScreenProps<RootStackParamList, 'WiFi Configuration'>;
-export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreenProps){
+export default function WiFiConfigScreen({ navigation }: WiFiConfigScreenProps){
     const [ssid, setSSID] = useState<string>();
     const [pswd, setPswd] = useState<string>("");
     const [state, setState] = useState<ConnectionState>('connected');
     const [loading, setLoading] = useState<boolean>(true);
-    const { data: scanned } = useWiFiScanStore();
+    const { data: scanned, status: scanStatus } = useWiFiScanStore();
     const theme = useTheme();
     
     const mounted = useRef(false);
@@ -52,7 +53,7 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
         if(loading) return;
         setLoading(true);
 
-        deviceRepository.updateData({
+        await deviceRepository.updateData({
             wifi_ssid: ssid,
             wifi_password: pswd
         });
@@ -84,6 +85,7 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
         
         return () => {
             mounted.current = false
+            // sheetRef.current?.close();
             bleService.removeConnectionStateListener(stateHandler);
         };
     }, [])
@@ -107,8 +109,8 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0}
     >
-        <View className="flex-1 justify-between items-center px-8 pt-6 pb-16">
-            <View className="flex-1 w-full gap-12">
+        <View className="flex-1 justify-between items-center pt-6">
+            <View className="flex-1 w-full gap-12 px-8">
                 <View>
                     <View className="flex flex-row items-center gap-2">
                         <WifiCog color={theme.foreground} size={16} />
@@ -139,7 +141,7 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
                     </View>
                 </AnimatedPressable>
             </View>
-            <View className="flex w-full">
+            <View className="flex w-full pt-4 px-8 pb-14 rounded-t-3xl" style={{ backgroundColor: theme.background }}>
                 <Button title="Save" loading={loading} onPress={handleSave}/>
             </View>
             <Portal>
@@ -165,10 +167,21 @@ export default function WiFiConfigScreen({ route, navigation }: WiFiConfigScreen
                         pressBehavior="close"
                     />}
                 >
-                    <Text className="text-center py-4 uppercase font-bold" style={{ color: theme.foreground }}>Nearby networks</Text>
-                    <BottomSheetScrollView contentContainerClassName="flex-1 gap-2 p-4">
+                    <View className="flex py-4 gap-1">
+                        <Text className="text-center uppercase font-bold" style={{ color: theme.foreground }}>Network Scan</Text>
+                        { scanStatus === 'scanned' && <Text className="text-center text-sm" style={{ color: theme.rgba(theme.foreground, .5) }}>Press to select</Text> }
+                    </View>
+                    { (scanStatus === 'scanned' || scanStatus === 'scanning') && <BottomSheetScrollView contentContainerClassName="flex-1 items-center gap-2 p-4">
                         { scanned.map((network) => <ScannedNetwork key={network.ssid} network={network} onSelect={() => selectNetwork(network)} />)}
-                    </BottomSheetScrollView>
+                        { scanStatus === 'scanning' && <View className="flex flex-row gap-2 py-2">
+                            <Spinner color={theme.foreground} />
+                            <Text className="flex items-center justify-center" style={{ color: theme.foreground }}>Scanning...</Text>
+                        </View>}
+                    </BottomSheetScrollView> }
+                    { scanStatus === 'failed' && <View className="flex items-center py-4 gap-2">
+                        <Text className="font-bold uppercase" style={{ color: theme.danger }}>Failed</Text>
+                        <Text className="text-center text-sm" style={{ color: theme.rgba(theme.foreground, .5) }}>Try restarting your device.</Text>
+                    </View>}
                 </BottomSheet>
             </Portal>
         </View>
@@ -184,7 +197,7 @@ function ScannedNetwork({ network, onSelect }: {
     const handlePress = () => onSelect(network);
 
     return <AnimatedPressable key={network.ssid} onPress={handlePress}>
-        <View className="flex flex-row items-center justify-between p-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
+        <View className="flex flex-row w-full items-center justify-between p-4 rounded-3xl" style={{ backgroundColor: theme.backgroundAlt }}>
             <Text style={{ color: theme.foreground }}>{ network.ssid }</Text>
             <Text className="text-sm" style={{ color: theme.rgba(theme.foreground, .7) }}>{ network.rssi } dBm</Text>
         </View>
