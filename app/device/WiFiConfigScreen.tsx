@@ -173,7 +173,7 @@ export default function WiFiConfigScreen({ navigation }: WiFiConfigScreenProps){
                         <Text className="text-center uppercase font-bold" style={{ color: theme.foreground }}>Network Scan</Text>
                         { scanStatus === 'scanned' && <Text className="text-center text-sm" style={{ color: theme.rgba(theme.foreground, .5) }}>Press to select</Text> }
                     </View>
-                    { (scanStatus === 'scanned' || scanStatus === 'scanning') && <BottomSheetScrollView contentContainerClassName="flex-1 items-center gap-2 p-4">
+                    { (scanStatus === 'scanned' || scanStatus === 'scanning') && <BottomSheetScrollView contentContainerClassName="items-center gap-2 p-4">
                         { scanned.map((network) => <ScannedNetwork key={network.ssid} network={network} onSelect={() => selectNetwork(network)} />)}
                         { scanStatus === 'scanning' && <View className="flex flex-row gap-2 py-2">
                             <Spinner color={theme.foreground} />

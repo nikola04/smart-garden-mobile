@@ -13,8 +13,9 @@ export class WiFiRepository {
 
     constructor() {
         this.bleService = BLEService.getInstance();
-        this.serviceUUID = config.allowedServiceUUIDs[0];
-        this.characteristicUUID = config.characteristic.wifi.uuid;
+        const service = config.bleServices.deviceService;
+        this.serviceUUID = service.uuid;
+        this.characteristicUUID = service.characteristics.wifi.uuid;
     }
 
     public static getInstance() {
@@ -37,7 +38,6 @@ export class WiFiRepository {
     }
 
     private handleLiveDataUpdate(raw: string): void {
-        console.log('notified:', raw)
         const { setStatus } = useWiFiScanStore.getState();
         if(raw === 'done'){
             setStatus('scanned')

@@ -12,6 +12,7 @@ import ViewSkeleton from "components/ViewSkeleton";
 import * as Haptics from 'expo-haptics';
 import { Device } from "react-native-ble-plx";
 import useTheme from "hooks/useTheme";
+import PowerPopup, { PowerPopupRef } from "components/PowerPopup";
 
 const bleService = BLEService.getInstance();
 const sensorsRepository = SensorsRepository.getInstance();
@@ -27,6 +28,8 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     const navigation = useNavigation<RootNavigationProp>();
     const theme = useTheme();
     const params = route.params;
+
+    const powerPopupRef = useRef<PowerPopupRef>(null);
 
     const sensors = useMemo(() => ({
         wifi: data?.wifi ?? '',
@@ -58,12 +61,15 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
     }
 
     const handlePowerLongPress = () => {
-        Haptics.selectionAsync();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        powerPopupRef.current?.open();
     }
 
     useEffect(() => {
-        if(state !== 'connected')
+        if(state !== 'connected'){
+            powerPopupRef.current?.close();
             return;
+        }
 
         sensorsRepository.getData().then(() => setLoading(false));
         const subscription = sensorsRepository.startLiveListening();
@@ -112,6 +118,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
      
     return (
         <SafeAreaView className="flex-1" style={{ backgroundColor: theme.background }}>
+            <PowerPopup ref={powerPopupRef} />
             <View className="relative flex gap-2 py-8">
                 <Text className="font-bold text-base text-center" style={{ color: theme.foreground }}>{ params.device.name }</Text>
                 <Text className="font-semibold uppercase text-center" style={{ color: getStateColor(state) }}>{ dynamicText }</Text>

@@ -13,8 +13,9 @@ export class DeviceRepository {
 
     constructor() {
         this.bleService = BLEService.getInstance();
-        this.serviceUUID = config.allowedServiceUUIDs[0];
-        this.characteristicUUID = config.characteristic.device.uuid;
+        const service = config.bleServices.deviceService;
+        this.serviceUUID = service.uuid;
+        this.characteristicUUID = service.characteristics.device.uuid;
     }
 
     public static getInstance() {

@@ -68,7 +68,7 @@ export default function ScanScreen() {
         setDevices([]);
         setState('scanning')
         animateButton()
-        bleService.startScan(config.allowedServiceUUIDs, 7000, (err, device) => {
+        bleService.startScan([config.bleServices.deviceService.uuid], 7000, (err, device) => {
             if(err) {
                 if(err.errorCode === BleErrorCode.BluetoothPoweredOff){
                     Alert.alert('Bluetooth is Off', 'Please enable Bluetooth in your settings.',[{

@@ -254,8 +254,23 @@ export class BLEService {
             const response = Buffer.from(characteristic.value, 'base64').toString('utf-8');
             return response ?? null;
         } catch (error) {
-            console.error('[ble.service.ts]writeCharacteristicWithResponseForService:', error);
+            console.error('[ble.service.ts]writeCharacteristicWithResponse:', error);
             return null;
+        }
+    }
+
+    public async writeCharacteristic(serviceUUID: string, characteristicUUID: string, value: string): Promise<boolean> {
+        if(!this.connectedDevice) {
+            console.error('No connected device to write to.');
+            return false;
+        }
+        try {
+            const base64Request = Buffer.from(value, 'utf-8').toString('base64');
+            await this.connectedDevice.writeCharacteristicWithoutResponseForService(serviceUUID, characteristicUUID, base64Request);
+            return true;
+        } catch (error) {
+            console.error('[ble.service.ts]writeCharacteristic:', error);
+            return false;
         }
     }
 
