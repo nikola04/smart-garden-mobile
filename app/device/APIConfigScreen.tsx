@@ -24,8 +24,8 @@ export default function APIConfigScreen(){
         if(loading) return;
         try{
             setLoading(true);
-            const serviceUUID = config.allowedServiceUUIDs[0];
-            const characteristicUUID = config.characteristic.device.uuid;
+            const serviceUUID = config.bleServices.deviceService.uuid;
+            const characteristicUUID = config.bleServices.deviceService.characteristics.device.uuid;
             const data = ({
                 api_key: key
             });
