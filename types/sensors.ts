@@ -6,6 +6,7 @@ export type SensorData = {
     charger?: string,
     air_temp?: string,
     air_hum?: string,
+    air_press?: string,
     soil?: string,
     light?: string // bool
 }

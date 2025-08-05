@@ -2,7 +2,7 @@ import {  PropsWithChildren, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, PressableProps, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { useNavigation, type StaticScreenProps } from '@react-navigation/native';
 import Loader from "components/Loader";
-import { Battery, BluetoothConnected, BluetoothSearching, ChevronRight, Droplets, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
+import { Battery, BluetoothConnected, BluetoothSearching, ChevronRight, Droplets, Gauge, LucideIcon, MonitorCog, Power, ServerCog, ThermometerSun, Waves, Wifi, WifiCog } from "lucide-react-native";
 import { BLEService, ConnectionState } from "services/ble.service";
 import { RootNavigationProp } from "navigation/RootNavigation";
 import { AnimatedPressable } from "components/AnimatedPressable";
@@ -37,6 +37,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
         charger: data?.charger ?? '',
         air_temp: data?.air_temp ? Number(data.air_temp).toFixed(1) + ' °C' : '',
         air_hum: data?.air_hum ? Number.parseInt(data.air_hum) + '%' : '',
+        air_press: data?.air_press ? Number.parseInt(data.air_press) + 'mbar' : '',
         soil: data?.soil ? Number(data.soil).toFixed(1) + '%' : '',
         light: data?.light === 'true' ? true : false
     }), [data]);
@@ -140,6 +141,7 @@ export default function DeviceScreen({ route }: StaticScreenProps<{
                         <StatusBox name="Battery" status={sensors.battery} icon={Battery} />
                         <StatusBox name="Temperature" status={sensors.air_temp} icon={ThermometerSun} />
                         <StatusBox name="Humidity" status={sensors.air_hum} icon={Waves} />
+                        <StatusBox name="Pressure" status={sensors.air_press} icon={Gauge} />
                         <StatusBox name="Soil Moisture" status={sensors.soil} icon={Droplets} />
                         </> : new Array(5).fill(null).map((_, i) => <StatusBoxSkeleton key={i} />)
                     }
